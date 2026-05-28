@@ -12,6 +12,7 @@ class LaunchConfigCache(
             .putString(KEY_XMLTV_ENDPOINT, config.xmltvEndpoint)
             .putString(KEY_VOD_ENDPOINT, config.vodEndpoint)
             .putString(KEY_JELLYFIN_BASE_URL, config.jellyfinBaseUrl)
+            .putString(KEY_JELLYFIN_API_KEY, config.jellyfinApiKey)
             .putInt(KEY_MAX_PROFILES, config.maxProfilesPerDevice)
             .putString(KEY_WARNING_THRESHOLDS, config.warningThresholdDays.joinToString(","))
             .putInt(KEY_LIVE_STREAM_LIMIT, config.liveStreamLimitPerUser)
@@ -30,6 +31,7 @@ class LaunchConfigCache(
             xmltvEndpoint = xmltvEndpoint,
             vodEndpoint = vodEndpoint,
             jellyfinBaseUrl = sharedPreferences.getString(KEY_JELLYFIN_BASE_URL, null),
+            jellyfinApiKey = sharedPreferences.getString(KEY_JELLYFIN_API_KEY, null),
             maxProfilesPerDevice = sharedPreferences.getInt(KEY_MAX_PROFILES, defaults.maxProfilesPerDevice),
             warningThresholdDays = parseThresholds(
                 sharedPreferences.getString(KEY_WARNING_THRESHOLDS, null),
@@ -56,6 +58,7 @@ class LaunchConfigCache(
         private const val KEY_XMLTV_ENDPOINT = "xmltv_endpoint"
         private const val KEY_VOD_ENDPOINT = "vod_endpoint"
         private const val KEY_JELLYFIN_BASE_URL = "jellyfin_base_url"
+        private const val KEY_JELLYFIN_API_KEY = "jellyfin_api_key"
         private const val KEY_MAX_PROFILES = "max_profiles_per_device"
         private const val KEY_WARNING_THRESHOLDS = "warning_threshold_days"
         private const val KEY_LIVE_STREAM_LIMIT = "live_stream_limit_per_user"
