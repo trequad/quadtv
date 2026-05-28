@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuadTV Admin</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">QT</div>
+    <div class="brand-copy">
+      <h1>QuadTV Admin</h1>
+      <p>QuadMedia operator portal</p>
+    </div>
+    <div class="topbar-actions">
+      <span id="session-state" class="pill muted">Signed out</span>
+      <button id="logout-button" class="ghost" type="button" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="login-panel" class="card hero-card">
+      <div>
+        <p class="eyebrow">Operator access</p>
+        <h2>Manage QuadTV users, devices, endpoints, and announcements.</h2>
+        <p>Login with the local admin credentials configured in the portal environment.</p>
+      </div>
+      <form id="login-form" class="stack form-card">
+        <label>Username
+          <input id="login-username" autocomplete="username" required value="admin" />
+        </label>
+        <label>Password
+          <input id="login-password" type="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit">Sign in</button>
+        <p id="login-message" class="status-line"></p>
+      </form>
+    </section>
+
+    <section id="dashboard-panel" hidden>
+      <section class="metrics grid four">
+        <div class="card metric"><span id="metric-users">0</span><small>Users</small></div>
+        <div class="card metric"><span id="metric-devices">0</span><small>Devices</small></div>
+        <div class="card metric warning"><span id="metric-expiring">0</span><small>Expiring soon</small></div>
+        <div class="card metric danger"><span id="metric-expired">0</span><small>Expired</small></div>
+      </section>
+
+      <section class="grid two">
+        <article id="users-panel" class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Accounts</p>
+              <h2>Users & subscriptions</h2>
+            </div>
+            <button id="refresh-button" class="ghost" type="button">Refresh</button>
+          </div>
+          <form id="create-user-form" class="inline-form">
+            <input id="user-display-name" placeholder="Display name" required />
+            <input id="user-email" type="email" placeholder="Email (optional)" />
+            <button type="submit">Add user</button>
+          </form>
+          <div id="users-list" class="list"></div>
+        </article>
+
+        <article id="devices-panel" class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">TV endpoints</p>
+              <h2>Devices</h2>
+            </div>
+          </div>
+          <form id="assign-device-form" class="inline-form">
+            <select id="assign-device-select" required></select>
+            <select id="assign-user-select" required></select>
+            <button type="submit">Link</button>
+          </form>
+          <div id="devices-list" class="list"></div>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article id="endpoint-config-panel" class="card">
+          <p class="eyebrow">App bootstrap</p>
+          <h2>Endpoint config</h2>
+          <form id="config-form" class="stack">
+            <label>Live TV M3U endpoint<input id="config-live" required /></label>
+            <label>XMLTV endpoint<input id="config-xmltv" required /></label>
+            <label>VOD endpoint<input id="config-vod" required /></label>
+            <label>Jellyfin URL<input id="config-jellyfin-url" /></label>
+            <label>Jellyfin API key<input id="config-jellyfin-key" /></label>
+            <div class="grid three compact">
+              <label>Max profiles/device<input id="config-max-profiles" type="number" min="1" required /></label>
+              <label>Live streams/user<input id="config-live-limit" type="number" min="1" required /></label>
+              <label>VOD streams/user<input id="config-vod-limit" type="number" min="1" required /></label>
+            </div>
+            <div class="grid two compact">
+              <label>Jellyfin streams/user<input id="config-jellyfin-limit" type="number" min="1" required /></label>
+              <label>Warning days CSV<input id="config-warning-days" placeholder="14,7,3,0" required /></label>
+            </div>
+            <button type="submit">Save config</button>
+          </form>
+        </article>
+
+        <article id="announcements-panel" class="card">
+          <p class="eyebrow">Operator messages</p>
+          <h2>Announcements</h2>
+          <form id="announcement-form" class="stack">
+            <label>Title<input id="announcement-title" required /></label>
+            <label>Body<textarea id="announcement-body" rows="4" required></textarea></label>
+            <label>Image/banner URL<input id="announcement-image" /></label>
+            <div class="grid two compact">
+              <label>Publish at<input id="announcement-publish" type="datetime-local" /></label>
+              <label>Expires at<input id="announcement-expires" type="datetime-local" /></label>
+            </div>
+            <label class="check"><input id="announcement-push" type="checkbox" /> Queue push notification</label>
+            <button type="submit">Publish announcement</button>
+          </form>
+          <div id="announcements-list" class="list"></div>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article id="provider-sync-panel" class="card">
+          <p class="eyebrow">Provider credentials</p>
+          <h2>Manual provider import</h2>
+          <p>Link the Live TV generated customer username/password to a local QuadTV user. The same credential pair must already exist on both Live TV and VOD.</p>
+          <form id="provider-sync-form" class="stack">
+            <label>QuadTV user<select id="provider-sync-user-select" required></select></label>
+            <label>Provider username<input id="provider-sync-username" autocomplete="off" required /></label>
+            <label>Provider numeric password<input id="provider-sync-password" type="password" autocomplete="new-password" required /></label>
+            <button type="submit">Link provider credentials</button>
+          </form>
+          <div id="provider-sync-list" class="list"></div>
+        </article>
+
+        <article id="profiles-panel" class="card">
+          <p class="eyebrow">Household profiles</p>
+          <h2>Profiles</h2>
+          <form id="load-profiles-form" class="inline-form">
+            <select id="profiles-device-select" required></select>
+            <button type="submit">Load profiles</button>
+          </form>
+          <form id="create-profile-form" class="inline-form">
+            <input id="profile-display-name" placeholder="Profile name" required />
+            <input id="profile-avatar" placeholder="Avatar e.g. raven" required />
+            <input id="profile-pin" placeholder="PIN optional" />
+            <button type="submit">Add profile</button>
+          </form>
+          <div id="profiles-list" class="list"></div>
+        </article>
+
+        <article id="notifications-panel" class="card">
+          <p class="eyebrow">Delivery log</p>
+          <h2>Notification history</h2>
+          <div id="notifications-list" class="list"></div>
+        </article>
+      </section>
+    </section>
+
+    <p id="global-status" class="toast" hidden></p>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
