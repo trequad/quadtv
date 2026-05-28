@@ -13,6 +13,12 @@ class AppConfig(BaseModel):
     vod_stream_limit_per_user: int = 1
     jellyfin_stream_limit_per_user: int = 2
 
+class ParentalBlocklist(BaseModel):
+    channel_ids: list[str] = []
+    category_names: list[str] = []
+    content_ratings: list[str] = ["R", "NC-17", "TV-MA"]
+    keywords: list[str] = ["adult", "xxx", "porn"]
+
 class Announcement(BaseModel):
     id: int
     title: str

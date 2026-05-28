@@ -22,6 +22,16 @@ class AppConfigModel(Base):
     jellyfin_stream_limit_per_user: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
 
 
+class ParentalBlocklistModel(Base):
+    __tablename__ = "parental_blocklist"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    channel_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    category_names: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    content_ratings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=lambda: ["R", "NC-17", "TV-MA"])
+    keywords: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=lambda: ["adult", "xxx", "porn"])
+
+
 class UserModel(Base):
     __tablename__ = "users"
 

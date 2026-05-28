@@ -3,6 +3,7 @@ package net.trequad.quadtv.adminapi
 import com.squareup.moshi.Json
 import net.trequad.quadtv.auth.CustomerLoginRequest
 import net.trequad.quadtv.auth.CustomerLoginResponse
+import net.trequad.quadtv.parental.ParentalBlocklistDto
 import net.trequad.quadtv.profiles.ProfileListResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -21,6 +22,9 @@ interface AdminApiService {
 
     @GET("api/v1/devices/{deviceId}/profiles")
     suspend fun getDeviceProfiles(@Path("deviceId") deviceId: Int): ProfileListResponse
+
+    @GET("api/v1/parental/blocklist")
+    suspend fun getParentalBlocklist(): ParentalBlocklistDto
 }
 
 data class LaunchConfigDto(
