@@ -3,6 +3,8 @@ package net.trequad.quadtv.adminapi
 import com.squareup.moshi.Json
 import net.trequad.quadtv.auth.CustomerLoginRequest
 import net.trequad.quadtv.auth.CustomerLoginResponse
+import net.trequad.quadtv.notifications.FcmTokenRegistrationRequest
+import net.trequad.quadtv.notifications.FcmTokenRegistrationResponse
 import net.trequad.quadtv.parental.ParentalBlocklistDto
 import net.trequad.quadtv.profiles.ProfileListResponse
 import retrofit2.http.Body
@@ -25,6 +27,12 @@ interface AdminApiService {
 
     @GET("api/v1/parental/blocklist")
     suspend fun getParentalBlocklist(): ParentalBlocklistDto
+
+    @POST("api/v1/devices/{deviceId}/fcm-token")
+    suspend fun registerFcmToken(
+        @Path("deviceId") deviceId: Int,
+        @Body request: FcmTokenRegistrationRequest
+    ): FcmTokenRegistrationResponse
 }
 
 data class LaunchConfigDto(

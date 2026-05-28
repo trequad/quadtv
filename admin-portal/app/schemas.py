@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class AppConfig(BaseModel):
     live_tv_endpoint: str
@@ -91,6 +91,15 @@ class DeviceRegistrationResponse(BaseModel):
     vod_stream_limit_per_user: int
     jellyfin_stream_limit_per_user: int
 
+class FcmTokenRegistrationRequest(BaseModel):
+    token: str = Field(min_length=1)
+    platform: str = "android-tv"
+
+class FcmTokenRegistrationResponse(BaseModel):
+    device_id: int
+    token_registered: bool
+    platform: str
+
 class Profile(BaseModel):
     id: int
     device_id: int
@@ -121,10 +130,12 @@ class SubscriptionStatus(BaseModel):
     days_remaining: int | None = None
 
 class NotificationRequest(BaseModel):
+    notification_type: str = "service_alert"
     title: str
     body: str
     target_type: str = "all"
     target_id: str | None = None
+    data: dict[str, str] = {}
 
 class NotificationHistory(BaseModel):
     id: int

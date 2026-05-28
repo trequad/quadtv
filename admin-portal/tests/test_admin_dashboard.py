@@ -93,5 +93,7 @@ def test_admin_device_list_returns_ids_and_user_links_for_assignment_ui(tmp_path
             "app_version": "0.1.0",
             "user_id": user["id"],
             "active": True,
+            "fcm_token_present": False,
+            "fcm_platform": None,
         }
     ]

@@ -85,6 +85,8 @@ class DeviceModel(Base):
     device_identifier: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     device_name: Mapped[str] = mapped_column(String(255), nullable=False)
     app_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    fcm_token: Mapped[str | None] = mapped_column(String(4096), nullable=True)
+    fcm_platform: Mapped[str | None] = mapped_column(String(80), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)

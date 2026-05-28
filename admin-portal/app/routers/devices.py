@@ -1,12 +1,12 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import DeviceModel, UserModel
 from app.routers.config import _get_or_create_config
-from app.schemas import DeviceRegistrationRequest, DeviceRegistrationResponse
+from app.schemas import FcmTokenRegistrationRequest, FcmTokenRegistrationResponse, DeviceRegistrationRequest, DeviceRegistrationResponse
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
 
@@ -77,7 +77,27 @@ def list_devices(db: Session = Depends(get_db)):
                 "app_version": device.app_version,
                 "user_id": device.user_id,
                 "active": device.active,
+                "fcm_token_present": bool(device.fcm_token),
+                "fcm_platform": device.fcm_platform,
             }
             for device in devices
         ]
     }
+
+
+@router.post("/{device_id}/fcm-token", response_model=FcmTokenRegistrationResponse)
+def register_fcm_token(device_id: int, request: FcmTokenRegistrationRequest, db: Session = Depends(get_db)):
+    device = db.get(DeviceModel, device_id)
+    if device is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    device.fcm_token = request.token
+    device.fcm_platform = request.platform
+    db.add(device)
+    db.commit()
+
+    return FcmTokenRegistrationResponse(
+        device_id=device.id,
+        token_registered=True,
+        platform=request.platform,
+    )
