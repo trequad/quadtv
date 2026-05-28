@@ -1,6 +1,8 @@
 package net.trequad.quadtv.adminapi
 
 import com.squareup.moshi.Json
+import net.trequad.quadtv.auth.CustomerLoginRequest
+import net.trequad.quadtv.auth.CustomerLoginResponse
 import net.trequad.quadtv.profiles.ProfileListResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -13,6 +15,9 @@ interface AdminApiService {
 
     @POST("api/v1/devices/register")
     suspend fun registerDevice(@Body request: DeviceRegistrationRequest): DeviceRegistrationResponse
+
+    @POST("api/v1/auth/customer-login")
+    suspend fun customerLogin(@Body request: CustomerLoginRequest): CustomerLoginResponse
 
     @GET("api/v1/devices/{deviceId}/profiles")
     suspend fun getDeviceProfiles(@Path("deviceId") deviceId: Int): ProfileListResponse

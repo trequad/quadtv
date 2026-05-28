@@ -52,10 +52,9 @@ def test_device_registration_repository_uses_stable_device_identifier_and_regist
     assert 'SharedPreferences' in identifier
 
 
-def test_profile_models_and_picker_fragment_exist_for_launch_flow():
+def test_profile_models_and_picker_fragment_exist_for_post_login_flow():
     models = read_android("profiles/ProfileModels.kt")
     picker = read_android("profiles/ProfilePickerFragment.kt")
-    main = read_android("MainActivity.kt")
 
     assert 'data class QuadTvProfile' in models
     assert '@Json(name = "display_name") val displayName: String' in models
@@ -65,5 +64,3 @@ def test_profile_models_and_picker_fragment_exist_for_launch_flow():
     assert 'QuadTV Profiles' in picker
     assert 'Choose who is watching' in picker
     assert 'ProfileCardPresenter' in picker
-    assert 'ProfilePickerFragment()' in main
-    assert 'HomeFragment()' not in main
