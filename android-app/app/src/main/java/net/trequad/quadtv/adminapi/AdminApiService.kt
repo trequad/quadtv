@@ -1,11 +1,21 @@
 package net.trequad.quadtv.adminapi
 
 import com.squareup.moshi.Json
+import net.trequad.quadtv.profiles.ProfileListResponse
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface AdminApiService {
     @GET("api/v1/app/config")
     suspend fun getLaunchConfig(): LaunchConfigDto
+
+    @POST("api/v1/devices/register")
+    suspend fun registerDevice(@Body request: DeviceRegistrationRequest): DeviceRegistrationResponse
+
+    @GET("api/v1/devices/{deviceId}/profiles")
+    suspend fun getDeviceProfiles(@Path("deviceId") deviceId: Int): ProfileListResponse
 }
 
 data class LaunchConfigDto(
