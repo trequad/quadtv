@@ -1,6 +1,7 @@
 package net.trequad.quadtv.vod
 
 import android.graphics.Color
+import android.content.Context
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -9,9 +10,19 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import net.trequad.quadtv.R
+import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.player.StreamPlaybackRequest
 
 class VodDetailsFragment : Fragment() {
+    private val navigator: QuadTvNavigator?
+        get() = activity as? QuadTvNavigator
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        require(context is QuadTvNavigator) {
+            "VodDetailsFragment must be hosted by a QuadTvNavigator"
+        }
+    }
     override fun onCreateView(
         inflater: android.view.LayoutInflater,
         container: ViewGroup?,
@@ -37,8 +48,20 @@ class VodDetailsFragment : Fragment() {
         }
     }
 
+    fun playVodItem(item: VodItem): Boolean {
+        val request = buildPlaybackRequest(item) ?: return false
+        navigator?.navigateToPlayer(request)
+        return true
+    }
+
     fun buildPlaybackRequest(item: VodItem): StreamPlaybackRequest? {
         val url = item.streamUrl ?: return null
-        return StreamPlaybackRequest(url = url, title = item.title, isLive = false)
+        return StreamPlaybackRequest(
+            url = url,
+            title = item.title,
+            isLive = false,
+            subtitle = "On-Demand",
+            nextTitle = item.rating ?: item.releaseYear?.toString() ?: "QuadTV VOD"
+        )
     }
 }
