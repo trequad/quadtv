@@ -1,5 +1,8 @@
 package net.trequad.quadtv.player
 
+import android.view.SurfaceView
+import androidx.media3.ui.PlayerView
+
 enum class PlayerEngine {
     EXOPLAYER,
     VLC
@@ -24,7 +27,13 @@ data class StreamPlaybackRequest(
     val bufferConfig: BufferConfig = BufferConfig()
 )
 
+data class PlayerRenderSurface(
+    val playerView: PlayerView,
+    val vlcSurfaceView: SurfaceView
+)
+
 interface QuadTvPlayer {
+    fun attachSurface(surface: PlayerRenderSurface)
     fun play(request: StreamPlaybackRequest)
     fun stop()
     fun release()
