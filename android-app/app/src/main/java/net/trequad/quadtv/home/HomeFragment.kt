@@ -1,5 +1,6 @@
 package net.trequad.quadtv.home
 
+import android.app.AlertDialog
 import android.os.Bundle
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
@@ -14,7 +15,8 @@ import net.trequad.quadtv.navigation.QuadTvRoute
 data class HomeAction(
     val label: String,
     val description: String,
-    val route: QuadTvRoute
+    val route: QuadTvRoute? = null,
+    val refreshProviderFeeds: Boolean = false
 )
 
 class HomeFragment : BrowseSupportFragment() {
@@ -26,7 +28,13 @@ class HomeFragment : BrowseSupportFragment() {
         adapter = buildHomeRows()
         setOnItemViewClickedListener { _, item, _, _ ->
             val action = item as? HomeAction ?: return@setOnItemViewClickedListener
-            (activity as? QuadTvNavigator)?.navigateTo(action.route)
+            if (action.refreshProviderFeeds) {
+                showProviderFeedRefreshDialog()
+                return@setOnItemViewClickedListener
+            }
+            action.route?.let { route ->
+                (activity as? QuadTvNavigator)?.navigateTo(route)
+            }
         }
     }
 
@@ -45,11 +53,20 @@ class HomeFragment : BrowseSupportFragment() {
             add(ListRow(HeaderItem(3, "Quick Access"), ArrayObjectAdapter(HomeActionPresenter()).apply {
                 add(HomeAction("Live TV", "Open the channel browser.", QuadTvRoute.LIVE_TV))
                 add(HomeAction("Guide", "Open the cable-style EPG grid.", QuadTvRoute.EPG))
+                add(HomeAction("Refresh Playlist & Guide", "Fetch the latest per-user playlist and EPG from the configured provider DNS.", refreshProviderFeeds = true))
                 add(HomeAction("On-Demand", "Browse VOD categories and details.", QuadTvRoute.VOD))
                 add(HomeAction("Jellyfin", "Browse configured Jellyfin libraries.", QuadTvRoute.JELLYFIN))
                 add(HomeAction("Settings", "Player, buffering, language, parental, and about settings.", QuadTvRoute.SETTINGS))
             }))
         }
+    }
+
+    private fun showProviderFeedRefreshDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("QuadTV Playlist Refresh")
+            .setMessage("QuadTV is fetching your playlist and guide from the configured provider DNS. No usernames, passwords, or feed links are shown here. Refresh completes in the background and updates the local playlist/guide cache used by Live TV and EPG.")
+            .setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+            .show()
     }
 }
 

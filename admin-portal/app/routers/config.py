@@ -9,9 +9,8 @@ from app.schemas import AppConfig
 router = APIRouter(prefix="/app", tags=["App Config"])
 
 DEFAULT_CONFIG = AppConfig(
-    live_tv_endpoint="https://live.example.invalid/playlist.m3u",
-    xmltv_endpoint="https://live.example.invalid/xmltv.xml",
-    vod_endpoint="https://vod.example.invalid/",
+    live_tv_provider_base_url="http://by.questreams.com:83",
+    vod_provider_base_url="https://livinitup.online",
     jellyfin_base_url=None,
     jellyfin_api_key=None,
     max_profiles_per_device=5,
@@ -19,14 +18,14 @@ DEFAULT_CONFIG = AppConfig(
     live_stream_limit_per_user=3,
     vod_stream_limit_per_user=1,
     jellyfin_stream_limit_per_user=2,
+    provider_feed_refresh_hours=24,
 )
 
 
 def _model_to_schema(model: AppConfigModel) -> AppConfig:
     return AppConfig(
-        live_tv_endpoint=model.live_tv_endpoint,
-        xmltv_endpoint=model.xmltv_endpoint,
-        vod_endpoint=model.vod_endpoint,
+        live_tv_provider_base_url=model.live_tv_provider_base_url,
+        vod_provider_base_url=model.vod_provider_base_url,
         jellyfin_base_url=model.jellyfin_base_url,
         jellyfin_api_key=model.jellyfin_api_key,
         max_profiles_per_device=model.max_profiles_per_device,
@@ -34,6 +33,7 @@ def _model_to_schema(model: AppConfigModel) -> AppConfig:
         live_stream_limit_per_user=model.live_stream_limit_per_user,
         vod_stream_limit_per_user=model.vod_stream_limit_per_user,
         jellyfin_stream_limit_per_user=model.jellyfin_stream_limit_per_user,
+        provider_feed_refresh_hours=model.provider_feed_refresh_hours,
     )
 
 

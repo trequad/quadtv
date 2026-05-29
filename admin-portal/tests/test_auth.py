@@ -57,7 +57,7 @@ def test_config_update_requires_admin_token_but_config_read_stays_public(tmp_pat
     assert public_get.status_code == 200
 
     payload = public_get.json()
-    payload["live_tv_endpoint"] = "https://protected-change.trequad.test/playlist.m3u"
+    payload["live_tv_provider_base_url"] = "https://protected-change.trequad.test"
 
     unauthorized = client.put("/api/v1/app/config", json=payload)
     assert unauthorized.status_code == 401
@@ -74,4 +74,4 @@ def test_config_update_requires_admin_token_but_config_read_stays_public(tmp_pat
         headers={"Authorization": f"Bearer {token}"},
     )
     assert authorized.status_code == 200
-    assert authorized.json()["live_tv_endpoint"] == payload["live_tv_endpoint"]
+    assert authorized.json()["live_tv_provider_base_url"] == payload["live_tv_provider_base_url"]

@@ -45,7 +45,7 @@ def test_home_fragment_renders_action_cards_and_invokes_navigator():
     assert "QuadTvRoute" in source
     assert "QuadTvNavigator" in source
     assert "setOnItemViewClickedListener" in source
-    assert "navigateTo(action.route)" in source
+    assert "navigateTo(route)" in source
     for label in ["Live TV", "Guide", "On-Demand", "Jellyfin", "Settings"]:
         assert label in source
     for route in ["QuadTvRoute.LIVE_TV", "QuadTvRoute.EPG", "QuadTvRoute.VOD", "QuadTvRoute.JELLYFIN", "QuadTvRoute.SETTINGS"]:

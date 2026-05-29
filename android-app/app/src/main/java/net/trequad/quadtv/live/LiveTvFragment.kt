@@ -18,10 +18,12 @@ import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.adminapi.AdminConfigRepository
+import net.trequad.quadtv.core.cache.CustomerSessionCache
 import net.trequad.quadtv.core.cache.LaunchConfigCache
 import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.navigation.QuadTvRoute
+import net.trequad.quadtv.provider.ProviderFeedRepository
 
 sealed class LiveTvAction(
     open val label: String,
@@ -145,9 +147,11 @@ class LiveTvFragment : BrowseSupportFragment() {
         val okHttpClient = NetworkModule.provideOkHttpClient()
         val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
         val apiService = retrofit.create(AdminApiService::class.java)
-        val preferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(preferences))
-        return LiveTvRepository(configRepository, okHttpClient)
+        val launchPreferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(launchPreferences))
+        val providerFeedRepository = ProviderFeedRepository(configRepository, CustomerSessionCache(sessionPreferences))
+        return LiveTvRepository(providerFeedRepository, okHttpClient)
     }
 }
 

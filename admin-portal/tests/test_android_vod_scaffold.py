@@ -39,7 +39,7 @@ def test_vod_repository_uses_portal_launch_vod_endpoint_and_okhttp_for_categorie
     assert 'suspend fun loadRecentlyAdded(): List<VodItem>' in source
     assert 'suspend fun loadItems(categoryId: String): List<VodItem>' in source
     assert 'suspend fun loadEpisodes(seriesId: String): List<VodEpisode>' in source
-    assert 'vodEndpoint' in source
+    assert 'vodProviderBaseUrl' in source
     assert 'Request.Builder().url' in source
     assert 'categoryId' in source
     assert 'seriesId' in source

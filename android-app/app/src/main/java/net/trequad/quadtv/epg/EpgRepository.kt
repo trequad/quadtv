@@ -1,17 +1,17 @@
 package net.trequad.quadtv.epg
 
-import net.trequad.quadtv.adminapi.AdminConfigRepository
+import net.trequad.quadtv.provider.ProviderFeedRepository
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class EpgRepository(
-    private val adminConfigRepository: AdminConfigRepository,
+    private val providerFeedRepository: ProviderFeedRepository,
     private val okHttpClient: OkHttpClient,
     private val parser: XmlTvParser = XmlTvParser()
 ) {
     suspend fun loadProgrammes(): List<EpgProgramme> {
-        val launchConfig = adminConfigRepository.loadLaunchConfig()
-        val request = Request.Builder().url(launchConfig.xmltvEndpoint).build()
+        val feed = providerFeedRepository.loadOrRefreshLiveTvFeed() ?: return emptyList()
+        val request = Request.Builder().url(feed.xmltvUrl).build()
         val response = okHttpClient.newCall(request).execute()
         response.use {
             if (!it.isSuccessful) return emptyList()

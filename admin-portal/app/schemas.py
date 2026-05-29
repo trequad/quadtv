@@ -2,9 +2,8 @@ from datetime import datetime, date
 from pydantic import BaseModel, Field
 
 class AppConfig(BaseModel):
-    live_tv_endpoint: str
-    xmltv_endpoint: str
-    vod_endpoint: str
+    live_tv_provider_base_url: str
+    vod_provider_base_url: str
     jellyfin_base_url: str | None = None
     jellyfin_api_key: str | None = None
     max_profiles_per_device: int = 5
@@ -12,6 +11,7 @@ class AppConfig(BaseModel):
     live_stream_limit_per_user: int = 3
     vod_stream_limit_per_user: int = 1
     jellyfin_stream_limit_per_user: int = 2
+    provider_feed_refresh_hours: int = 24
 
 class ParentalBlocklist(BaseModel):
     channel_ids: list[str] = []

@@ -11,9 +11,9 @@ def read_android(relative_path):
 def test_launch_config_dto_maps_fastapi_snake_case_fields():
     source = read_android("adminapi/AdminApiService.kt")
 
-    assert '@Json(name = "live_tv_endpoint")' in source
-    assert '@Json(name = "xmltv_endpoint")' in source
-    assert '@Json(name = "vod_endpoint")' in source
+    assert '@Json(name = "live_tv_provider_base_url")' in source
+    assert '@Json(name = "vod_provider_base_url")' in source
+    assert '@Json(name = "provider_feed_refresh_hours")' in source
     assert '@Json(name = "jellyfin_base_url")' in source
     assert '@Json(name = "max_profiles_per_device")' in source
     assert '@Json(name = "warning_threshold_days")' in source
@@ -42,9 +42,9 @@ def test_launch_config_domain_model_contains_stream_limits_and_baked_defaults():
     source = read_android("adminapi/LaunchConfig.kt")
 
     assert "data class LaunchConfig" in source
-    assert "liveTvEndpoint: String" in source
-    assert "xmltvEndpoint: String" in source
-    assert "vodEndpoint: String" in source
+    assert "liveTvProviderBaseUrl: String" in source
+    assert "vodProviderBaseUrl: String" in source
+    assert "providerFeedRefreshHours: Int" in source
     assert "jellyfinBaseUrl: String?" in source
     assert "maxProfilesPerDevice: Int" in source
     assert "warningThresholdDays: List<Int>" in source
@@ -52,6 +52,6 @@ def test_launch_config_domain_model_contains_stream_limits_and_baked_defaults():
     assert "vodStreamLimitPerUser: Int" in source
     assert "jellyfinStreamLimitPerUser: Int" in source
     assert "fun defaults()" in source
-    assert "QuadTvConfig.LIVE_TV_DNS_ENDPOINT" in source
-    assert "QuadTvConfig.LIVE_TV_XMLTV_ENDPOINT" in source
-    assert "QuadTvConfig.VOD_DNS_ENDPOINT" in source
+    assert "QuadTvConfig.OPERATOR_LIVE_TV_PROVIDER_BASE_URL" in source
+    assert "QuadTvConfig.OPERATOR_VOD_PROVIDER_BASE_URL" in source
+    assert "QuadTvConfig.PROVIDER_FEED_REFRESH_HOURS" in source

@@ -29,7 +29,7 @@ class VodRepository(
 
     private suspend fun <T> getList(path: String, itemType: Class<T>): List<T> {
         val launchConfig = adminConfigRepository.loadLaunchConfig()
-        val baseUrl = launchConfig.vodEndpoint.trimEnd('/')
+        val baseUrl = launchConfig.vodProviderBaseUrl.trimEnd('/')
         val request = Request.Builder().url("$baseUrl/$path").build()
         val response = okHttpClient.newCall(request).execute()
         response.use {

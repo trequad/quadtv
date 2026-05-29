@@ -36,27 +36,27 @@ interface AdminApiService {
 }
 
 data class LaunchConfigDto(
-    @Json(name = "live_tv_endpoint") val liveTvEndpoint: String,
-    @Json(name = "xmltv_endpoint") val xmltvEndpoint: String,
-    @Json(name = "vod_endpoint") val vodEndpoint: String,
+    @Json(name = "live_tv_provider_base_url") val liveTvProviderBaseUrl: String,
+    @Json(name = "vod_provider_base_url") val vodProviderBaseUrl: String,
     @Json(name = "jellyfin_base_url") val jellyfinBaseUrl: String?,
     @Json(name = "jellyfin_api_key") val jellyfinApiKey: String?,
     @Json(name = "max_profiles_per_device") val maxProfilesPerDevice: Int,
     @Json(name = "warning_threshold_days") val warningThresholdDays: List<Int>,
     @Json(name = "live_stream_limit_per_user") val liveStreamLimitPerUser: Int,
     @Json(name = "vod_stream_limit_per_user") val vodStreamLimitPerUser: Int,
-    @Json(name = "jellyfin_stream_limit_per_user") val jellyfinStreamLimitPerUser: Int
+    @Json(name = "jellyfin_stream_limit_per_user") val jellyfinStreamLimitPerUser: Int,
+    @Json(name = "provider_feed_refresh_hours") val providerFeedRefreshHours: Int
 ) {
     fun toDomain() = LaunchConfig(
-        liveTvEndpoint = liveTvEndpoint,
-        xmltvEndpoint = xmltvEndpoint,
-        vodEndpoint = vodEndpoint,
+        liveTvProviderBaseUrl = liveTvProviderBaseUrl,
+        vodProviderBaseUrl = vodProviderBaseUrl,
         jellyfinBaseUrl = jellyfinBaseUrl,
         jellyfinApiKey = jellyfinApiKey,
         maxProfilesPerDevice = maxProfilesPerDevice,
         warningThresholdDays = warningThresholdDays,
         liveStreamLimitPerUser = liveStreamLimitPerUser,
         vodStreamLimitPerUser = vodStreamLimitPerUser,
-        jellyfinStreamLimitPerUser = jellyfinStreamLimitPerUser
+        jellyfinStreamLimitPerUser = jellyfinStreamLimitPerUser,
+        providerFeedRefreshHours = providerFeedRefreshHours
     )
 }

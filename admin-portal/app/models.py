@@ -10,9 +10,8 @@ class AppConfigModel(Base):
     __tablename__ = "app_config"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    live_tv_endpoint: Mapped[str] = mapped_column(String(2048), nullable=False)
-    xmltv_endpoint: Mapped[str] = mapped_column(String(2048), nullable=False)
-    vod_endpoint: Mapped[str] = mapped_column(String(2048), nullable=False)
+    live_tv_provider_base_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    vod_provider_base_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     jellyfin_base_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     jellyfin_api_key: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     max_profiles_per_device: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
@@ -20,6 +19,7 @@ class AppConfigModel(Base):
     live_stream_limit_per_user: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     vod_stream_limit_per_user: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     jellyfin_stream_limit_per_user: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    provider_feed_refresh_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
 
 
 class ParentalBlocklistModel(Base):

@@ -8,9 +8,8 @@ class LaunchConfigCache(
 ) {
     fun save(config: LaunchConfig) {
         sharedPreferences.edit()
-            .putString(KEY_LIVE_TV_ENDPOINT, config.liveTvEndpoint)
-            .putString(KEY_XMLTV_ENDPOINT, config.xmltvEndpoint)
-            .putString(KEY_VOD_ENDPOINT, config.vodEndpoint)
+            .putString(KEY_LIVE_TV_PROVIDER_BASE_URL, config.liveTvProviderBaseUrl)
+            .putString(KEY_VOD_PROVIDER_BASE_URL, config.vodProviderBaseUrl)
             .putString(KEY_JELLYFIN_BASE_URL, config.jellyfinBaseUrl)
             .putString(KEY_JELLYFIN_API_KEY, config.jellyfinApiKey)
             .putInt(KEY_MAX_PROFILES, config.maxProfilesPerDevice)
@@ -18,18 +17,17 @@ class LaunchConfigCache(
             .putInt(KEY_LIVE_STREAM_LIMIT, config.liveStreamLimitPerUser)
             .putInt(KEY_VOD_STREAM_LIMIT, config.vodStreamLimitPerUser)
             .putInt(KEY_JELLYFIN_STREAM_LIMIT, config.jellyfinStreamLimitPerUser)
+            .putInt(KEY_PROVIDER_FEED_REFRESH_HOURS, config.providerFeedRefreshHours)
             .apply()
     }
 
     fun load(): LaunchConfig? {
-        val liveTvEndpoint = sharedPreferences.getString(KEY_LIVE_TV_ENDPOINT, null) ?: return null
-        val xmltvEndpoint = sharedPreferences.getString(KEY_XMLTV_ENDPOINT, null) ?: return null
-        val vodEndpoint = sharedPreferences.getString(KEY_VOD_ENDPOINT, null) ?: return null
+        val liveTvProviderBaseUrl = sharedPreferences.getString(KEY_LIVE_TV_PROVIDER_BASE_URL, null) ?: return null
+        val vodProviderBaseUrl = sharedPreferences.getString(KEY_VOD_PROVIDER_BASE_URL, null) ?: return null
         val defaults = LaunchConfig.defaults()
         return LaunchConfig(
-            liveTvEndpoint = liveTvEndpoint,
-            xmltvEndpoint = xmltvEndpoint,
-            vodEndpoint = vodEndpoint,
+            liveTvProviderBaseUrl = liveTvProviderBaseUrl,
+            vodProviderBaseUrl = vodProviderBaseUrl,
             jellyfinBaseUrl = sharedPreferences.getString(KEY_JELLYFIN_BASE_URL, null),
             jellyfinApiKey = sharedPreferences.getString(KEY_JELLYFIN_API_KEY, null),
             maxProfilesPerDevice = sharedPreferences.getInt(KEY_MAX_PROFILES, defaults.maxProfilesPerDevice),
@@ -42,6 +40,10 @@ class LaunchConfigCache(
             jellyfinStreamLimitPerUser = sharedPreferences.getInt(
                 KEY_JELLYFIN_STREAM_LIMIT,
                 defaults.jellyfinStreamLimitPerUser
+            ),
+            providerFeedRefreshHours = sharedPreferences.getInt(
+                KEY_PROVIDER_FEED_REFRESH_HOURS,
+                defaults.providerFeedRefreshHours
             )
         )
     }
@@ -54,9 +56,8 @@ class LaunchConfigCache(
 
     companion object {
         const val PREFERENCES_NAME = "quadtv_launch_config"
-        private const val KEY_LIVE_TV_ENDPOINT = "live_tv_endpoint"
-        private const val KEY_XMLTV_ENDPOINT = "xmltv_endpoint"
-        private const val KEY_VOD_ENDPOINT = "vod_endpoint"
+        private const val KEY_LIVE_TV_PROVIDER_BASE_URL = "live_tv_provider_base_url"
+        private const val KEY_VOD_PROVIDER_BASE_URL = "vod_provider_base_url"
         private const val KEY_JELLYFIN_BASE_URL = "jellyfin_base_url"
         private const val KEY_JELLYFIN_API_KEY = "jellyfin_api_key"
         private const val KEY_MAX_PROFILES = "max_profiles_per_device"
@@ -64,5 +65,6 @@ class LaunchConfigCache(
         private const val KEY_LIVE_STREAM_LIMIT = "live_stream_limit_per_user"
         private const val KEY_VOD_STREAM_LIMIT = "vod_stream_limit_per_user"
         private const val KEY_JELLYFIN_STREAM_LIMIT = "jellyfin_stream_limit_per_user"
+        private const val KEY_PROVIDER_FEED_REFRESH_HOURS = "provider_feed_refresh_hours"
     }
 }

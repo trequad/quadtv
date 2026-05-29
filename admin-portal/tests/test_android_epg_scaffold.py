@@ -46,10 +46,10 @@ def test_epg_repository_fetches_xmltv_from_launch_config_and_groups_by_channel()
 
     assert 'class EpgRepository' in source
     assert 'OkHttpClient' in source
-    assert 'AdminConfigRepository' in source
+    assert 'ProviderFeedRepository' in source
     assert 'XmlTvParser' in source
     assert 'suspend fun loadProgrammes(): List<EpgProgramme>' in source
-    assert 'xmltvEndpoint' in source
+    assert 'feed.xmltvUrl' in source
     assert 'Request.Builder().url' in source
     assert 'parser.parse' in source
     assert 'fun programmesForChannel' in source

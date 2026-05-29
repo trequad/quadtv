@@ -61,10 +61,10 @@ def test_live_repository_fetches_m3u_from_launch_config_endpoint_with_okhttp():
 
     assert 'class LiveTvRepository' in source
     assert 'OkHttpClient' in source
-    assert 'AdminConfigRepository' in source
+    assert 'ProviderFeedRepository' in source
     assert 'M3uParser' in source
     assert 'suspend fun loadChannels(): List<LiveChannel>' in source
-    assert 'loadLaunchConfig()' in source
-    assert 'liveTvEndpoint' in source
+    assert 'loadOrRefreshLiveTvFeed()' in source
+    assert 'feed.liveTvPlaylistUrl' in source
     assert 'Request.Builder().url' in source
     assert 'parser.parse' in source

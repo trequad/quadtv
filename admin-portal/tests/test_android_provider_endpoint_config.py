@@ -19,8 +19,7 @@ def test_android_config_hardcodes_operator_provider_base_urls():
     assert "OPERATOR_LIVE_TV_PROVIDER_BASE_URL" in source
     assert 'OPERATOR_LIVE_TV_PROVIDER_BASE_URL = "http://by.questreams.com:83"' in source
     assert "LIVE_TV_DNS_ENDPOINT = OPERATOR_LIVE_TV_PROVIDER_BASE_URL" in source
-    assert "OPERATOR_LIVE_TV_XMLTV_ENDPOINT" in source
-    assert "LIVE_TV_XMLTV_ENDPOINT = OPERATOR_LIVE_TV_XMLTV_ENDPOINT" in source
+    assert "PROVIDER_FEED_REFRESH_HOURS = 24" in source
     assert "OPERATOR_VOD_PROVIDER_BASE_URL" in source
     assert 'OPERATOR_VOD_PROVIDER_BASE_URL = "https://livinitup.online"' in source
     assert "VOD_DNS_ENDPOINT = OPERATOR_VOD_PROVIDER_BASE_URL" in source
@@ -31,9 +30,9 @@ def test_android_config_hardcodes_operator_provider_base_urls():
 def test_launch_config_defaults_continue_to_use_android_constants():
     source = read_text(ANDROID_SRC / "adminapi/LaunchConfig.kt")
 
-    assert "vodEndpoint = QuadTvConfig.VOD_DNS_ENDPOINT" in source
-    assert "liveTvEndpoint = QuadTvConfig.LIVE_TV_DNS_ENDPOINT" in source
-    assert "xmltvEndpoint = QuadTvConfig.LIVE_TV_XMLTV_ENDPOINT" in source
+    assert "vodProviderBaseUrl = QuadTvConfig.OPERATOR_VOD_PROVIDER_BASE_URL" in source
+    assert "liveTvProviderBaseUrl = QuadTvConfig.OPERATOR_LIVE_TV_PROVIDER_BASE_URL" in source
+    assert "providerFeedRefreshHours = QuadTvConfig.PROVIDER_FEED_REFRESH_HOURS" in source
 
 
 def test_android_network_security_allows_only_live_provider_http_host():
