@@ -52,8 +52,9 @@ def test_vod_browse_and_details_fragments_scaffold_leanback_rows_and_playback_ha
     assert 'class VodBrowseFragment : BrowseSupportFragment()' in browse
     assert 'QuadTV On-Demand' in browse
     assert 'Recently Added VOD' in browse
-    assert 'Browse categories' in browse
-    assert 'VodCardPresenter' in browse
+    assert 'On-Demand Categories' in browse
+    assert 'Browse categories' not in browse
+    assert 'VodRepository' in browse
     assert 'R.color.quadmedia_blue' in browse
 
     assert 'class VodDetailsFragment : Fragment()' in details
