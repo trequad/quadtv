@@ -1,5 +1,6 @@
 package net.trequad.quadtv.live
 
+import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.view.ViewGroup
@@ -11,7 +12,15 @@ import androidx.leanback.widget.HeaderItem
 import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.ListRowPresenter
 import androidx.leanback.widget.Presenter
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.adminapi.AdminApiService
+import net.trequad.quadtv.adminapi.AdminConfigRepository
+import net.trequad.quadtv.core.cache.LaunchConfigCache
+import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.navigation.QuadTvRoute
 
@@ -41,17 +50,28 @@ sealed class LiveTvAction(
         override val label: String = channel.name,
         override val description: String = "Prepare HLS playback handoff through the selected bundled player."
     ) : LiveTvAction(label, description)
+
+    data class Message(
+        override val label: String,
+        override val description: String
+    ) : LiveTvAction(label, description)
 }
 
 class LiveTvFragment : BrowseSupportFragment() {
     private val playbackCoordinator = LiveTvPlaybackCoordinator()
+    private val liveTvRepository: LiveTvRepository by lazy { buildLiveTvRepository() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = "QuadTV Live TV"
         headersState = HEADERS_ENABLED
         brandColor = resources.getColor(R.color.quadmedia_blue, null)
-        adapter = buildLiveRows()
+        adapter = buildLoadingRows()
+        configureClickHandling()
+        loadChannelsFromRepository()
+    }
+
+    private fun configureClickHandling() {
         setOnItemViewClickedListener { _, item, _, _ ->
             val action = item as? LiveTvAction ?: return@setOnItemViewClickedListener
             action.route?.let { route ->
@@ -72,24 +92,67 @@ class LiveTvFragment : BrowseSupportFragment() {
         }
     }
 
-    private fun buildLiveRows(): ArrayObjectAdapter {
-        val previewChannel = LiveChannel(
-            id = "preview-channel",
-            name = "Preview Channel",
-            streamUrl = "https://example.invalid/quadtv/live/preview.m3u8",
-            groupTitle = "QuadTV Preview"
-        )
+    private fun loadChannelsFromRepository() {
+        lifecycleScope.launch {
+            val channels = try {
+                withContext(Dispatchers.IO) { liveTvRepository.loadChannels() }
+            } catch (_: Exception) {
+                adapter = buildErrorRows("Unable to load Live TV channels", "Check the portal endpoint config and network connection.")
+                return@launch
+            }
 
+            adapter = if (channels.isEmpty()) {
+                buildErrorRows("No channels available", "The live TV playlist returned no playable channels.")
+            } else {
+                buildLiveRows(channels)
+            }
+        }
+    }
+
+    private fun buildLiveRows(channels: List<LiveChannel>): ArrayObjectAdapter {
+        val groups = channels.groupBy { it.groupTitle ?: "Other Channels" }
         return ArrayObjectAdapter(ListRowPresenter()).apply {
             add(ListRow(HeaderItem(0, "Live TV"), ArrayObjectAdapter(LiveTvActionPresenter()).apply {
                 add(LiveTvAction.AllChannels)
                 add(LiveTvAction.OpenGuide)
                 add(LiveTvAction.InfoBanner)
             }))
-            add(ListRow(HeaderItem(1, "Playback Handoff"), ArrayObjectAdapter(LiveTvActionPresenter()).apply {
-                add(LiveTvAction.Channel(previewChannel))
+            groups.toSortedMap().forEach { (groupTitle, groupChannels) ->
+                add(ListRow(HeaderItem(groupTitle), ArrayObjectAdapter(LiveTvActionPresenter()).apply {
+                    groupChannels.sortedBy { it.name }.forEach { channel ->
+                        add(LiveTvAction.Channel(channel))
+                    }
+                }))
+            }
+        }
+    }
+
+    private fun buildLoadingRows(): ArrayObjectAdapter {
+        return ArrayObjectAdapter(ListRowPresenter()).apply {
+            add(ListRow(HeaderItem(0, "Live TV"), ArrayObjectAdapter(LiveTvActionPresenter()).apply {
+                add(LiveTvAction.Message("Loading channels", "Fetching the portal-configured M3U playlist for this profile."))
+                add(LiveTvAction.OpenGuide)
             }))
         }
+    }
+
+    private fun buildErrorRows(label: String, description: String): ArrayObjectAdapter {
+        return ArrayObjectAdapter(ListRowPresenter()).apply {
+            add(ListRow(HeaderItem(0, "Live TV"), ArrayObjectAdapter(LiveTvActionPresenter()).apply {
+                add(LiveTvAction.Message(label, description))
+                add(LiveTvAction.OpenGuide)
+            }))
+        }
+    }
+
+    private fun buildLiveTvRepository(): LiveTvRepository {
+        val context = requireContext().applicationContext
+        val okHttpClient = NetworkModule.provideOkHttpClient()
+        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
+        val apiService = retrofit.create(AdminApiService::class.java)
+        val preferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(preferences))
+        return LiveTvRepository(configRepository, okHttpClient)
     }
 }
 

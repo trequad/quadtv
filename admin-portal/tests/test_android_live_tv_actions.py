@@ -21,7 +21,7 @@ def test_live_tv_actions_carry_guide_route_and_channel_payloads():
     assert "data object OpenGuide" in source
     assert "data class Channel" in source
     assert "LiveChannel" in source
-    assert "Preview Channel" in source
+    assert "LiveTvAction.Channel(channel)" in source
 
 
 def test_live_tv_playback_coordinator_builds_live_stream_requests():
