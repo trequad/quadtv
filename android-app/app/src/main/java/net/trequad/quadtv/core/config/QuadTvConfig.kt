@@ -6,8 +6,10 @@ object QuadTvConfig {
 
     // Operator-controlled provider defaults. The portal may override these at launch.
     const val ADMIN_PORTAL_BASE_URL = "https://example.invalid/"
-    const val LIVE_TV_DNS_ENDPOINT = "https://live.example.invalid/playlist.m3u"
-    const val LIVE_TV_XMLTV_ENDPOINT = "https://live.example.invalid/xmltv.xml"
+    const val OPERATOR_LIVE_TV_PROVIDER_BASE_URL = "http://by.questreams.com:83"
+    const val OPERATOR_LIVE_TV_XMLTV_ENDPOINT = OPERATOR_LIVE_TV_PROVIDER_BASE_URL
+    const val LIVE_TV_DNS_ENDPOINT = OPERATOR_LIVE_TV_PROVIDER_BASE_URL
+    const val LIVE_TV_XMLTV_ENDPOINT = OPERATOR_LIVE_TV_XMLTV_ENDPOINT
     const val OPERATOR_VOD_PROVIDER_BASE_URL = "https://livinitup.online"
     const val VOD_DNS_ENDPOINT = OPERATOR_VOD_PROVIDER_BASE_URL
 

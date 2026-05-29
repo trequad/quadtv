@@ -10,6 +10,8 @@ import net.trequad.quadtv.jellyfin.JellyfinBrowseFragment
 import net.trequad.quadtv.live.LiveTvFragment
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.navigation.QuadTvRoute
+import net.trequad.quadtv.player.PlayerFragment
+import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.profiles.ProfilePickerFragment
 import net.trequad.quadtv.settings.SettingsFragment
 import net.trequad.quadtv.vod.VodBrowseFragment
@@ -32,6 +34,7 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
             QuadTvRoute.VOD -> VodBrowseFragment()
             QuadTvRoute.JELLYFIN -> JellyfinBrowseFragment()
             QuadTvRoute.SETTINGS -> SettingsFragment()
+            QuadTvRoute.PLAYER -> PlayerFragment()
         }
 
         val transaction = supportFragmentManager.beginTransaction()
@@ -42,6 +45,13 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
         }
 
         transaction.commit()
+    }
+
+    override fun navigateToPlayer(request: StreamPlaybackRequest) {
+        supportFragmentManager.beginTransaction()
+            .replace(android.R.id.content, PlayerFragment.newInstance(request))
+            .addToBackStack(QuadTvRoute.PLAYER.name)
+            .commit()
     }
 
     override fun goBack() {

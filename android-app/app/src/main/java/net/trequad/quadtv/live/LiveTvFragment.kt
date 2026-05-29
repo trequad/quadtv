@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.HeaderItem
@@ -81,11 +80,7 @@ class LiveTvFragment : BrowseSupportFragment() {
             when (action) {
                 is LiveTvAction.Channel -> {
                     val request = playbackCoordinator.buildRequest(action.channel)
-                    Toast.makeText(
-                        requireContext(),
-                        "Prepared ${request.title} for bundled live playback",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    (activity as? QuadTvNavigator)?.navigateToPlayer(request)
                 }
                 else -> Unit
             }
