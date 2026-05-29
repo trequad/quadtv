@@ -21,6 +21,8 @@ data class BufferConfig(
 data class StreamPlaybackRequest(
     val url: String,
     val title: String? = null,
+    val subtitle: String? = null,
+    val nextTitle: String? = null,
     val isLive: Boolean = false,
     val preferredAudioLanguage: String? = null,
     val preferredSubtitleLanguage: String? = null,

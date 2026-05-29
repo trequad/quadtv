@@ -7,6 +7,8 @@ class LiveTvPlaybackCoordinator {
         return StreamPlaybackRequest(
             url = channel.streamUrl,
             title = channel.name,
+            subtitle = "Live TV",
+            nextTitle = "Guide data pending",
             isLive = true
         )
     }
