@@ -62,4 +62,5 @@ def test_customer_login_and_expired_subscription_fragments_provide_branded_launc
     assert 'Please contact QuadMedia' in expired
     assert 'class ExpiredSubscriptionFragment : Fragment()' in expired
     assert 'CustomerLoginFragment()' in main
-    assert 'ProfilePickerFragment()' not in main
+    assert 'navigateTo(QuadTvRoute.LOGIN)' in main
+    assert 'QuadTvRoute.PROFILES -> ProfilePickerFragment()' in main
