@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.settings import settings
 from app.database import init_db
-from app.routers import announcements, auth, config, devices, jellyfin, notifications, parental, profiles, provider_sync, subscriptions, users
+from app.routers import announcements, auth, config, devices, jellyfin, notifications, parental, profiles, provider_sync, releases, subscriptions, users
 
 
 @asynccontextmanager
@@ -35,6 +35,7 @@ app.include_router(notifications.router, prefix=api_prefix)
 app.include_router(parental.router, prefix=api_prefix)
 app.include_router(jellyfin.router, prefix=api_prefix)
 app.include_router(provider_sync.router, prefix=api_prefix)
+app.include_router(releases.router, prefix=api_prefix)
 
 @app.get("/health")
 def health():

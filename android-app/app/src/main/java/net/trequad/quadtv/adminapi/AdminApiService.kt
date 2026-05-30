@@ -11,6 +11,8 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
+import net.trequad.quadtv.updates.UpdateStatusDto
 
 interface AdminApiService {
     @GET("api/v1/app/config")
@@ -33,6 +35,11 @@ interface AdminApiService {
         @Path("deviceId") deviceId: Int,
         @Body request: FcmTokenRegistrationRequest
     ): FcmTokenRegistrationResponse
+
+    @GET("api/v1/releases/current")
+    suspend fun getCurrentReleaseStatus(
+        @Query("current_version_code") currentVersionCode: Int
+    ): UpdateStatusDto
 }
 
 data class LaunchConfigDto(

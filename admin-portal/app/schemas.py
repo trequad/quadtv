@@ -175,3 +175,32 @@ class CustomerLoginResponse(BaseModel):
     expires_on: date | None = None
     days_remaining: int | None = None
     message: str | None = None
+
+
+class AppReleaseCreate(BaseModel):
+    version_name: str = Field(min_length=1)
+    version_code: int = Field(ge=1)
+    changelog: str = Field(min_length=1)
+    apk_url: str = Field(min_length=1)
+    minimum_supported_version_code: int = Field(ge=0)
+    forced: bool = False
+    published: bool = True
+    release_date: datetime | None = None
+
+
+class AppRelease(BaseModel):
+    id: int
+    version_name: str
+    version_code: int
+    changelog: str
+    apk_url: str
+    minimum_supported_version_code: int
+    forced: bool
+    published: bool
+    release_date: datetime
+
+
+class UpdateStatus(BaseModel):
+    update_available: bool
+    forced_update_required: bool = False
+    release: AppRelease | None = None

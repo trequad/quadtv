@@ -153,3 +153,19 @@ class NotificationHistoryModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
+
+
+class AppReleaseModel(Base):
+    __tablename__ = "app_releases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    version_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    version_code: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    changelog: Mapped[str] = mapped_column(Text, nullable=False)
+    apk_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    minimum_supported_version_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    forced: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    release_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )

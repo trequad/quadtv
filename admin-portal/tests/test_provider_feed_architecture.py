@@ -72,6 +72,6 @@ def test_home_manual_refresh_and_release_update_architecture_are_planned():
     assert "manual Refresh Playlist & Guide action" in readme
     assert "self-hosted APK release metadata" in readme
     assert "### Task 9.13: Per-user provider feed modeling correction" in plan
-    assert "### Future Phase: Sideloaded APK release and update distribution" in plan
+    assert "### Task 9.14: Sideloaded APK release and update distribution" in plan
     assert "versionName/versionCode" in plan
     assert "forced update" in plan

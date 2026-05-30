@@ -14,6 +14,7 @@ import net.trequad.quadtv.player.PlayerFragment
 import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.profiles.ProfilePickerFragment
 import net.trequad.quadtv.settings.SettingsFragment
+import net.trequad.quadtv.updates.UpdatePromptFragment
 import net.trequad.quadtv.vod.VodBrowseFragment
 
 class MainActivity : FragmentActivity(), QuadTvNavigator {
@@ -56,5 +57,9 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
 
     override fun goBack() {
         supportFragmentManager.popBackStack()
+    }
+
+    private fun buildUpdatePrompt(forced: Boolean): Fragment {
+        return if (forced) UpdatePromptFragment.forced() else UpdatePromptFragment.optional()
     }
 }
