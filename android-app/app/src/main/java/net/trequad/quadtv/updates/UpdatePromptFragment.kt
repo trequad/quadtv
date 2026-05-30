@@ -5,9 +5,12 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import net.trequad.quadtv.navigation.QuadTvNavigator
+import net.trequad.quadtv.navigation.QuadTvRoute
 
 class UpdatePromptFragment : Fragment() {
     override fun onCreateView(
@@ -37,6 +40,14 @@ class UpdatePromptFragment : Fragment() {
                 textSize = 20f
                 gravity = Gravity.CENTER
             })
+            val button = Button(context).apply {
+                text = "Continue to QuadTV"
+                setOnClickListener {
+                    (activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.LOGIN)
+                }
+            }
+            button.visibility = if (status == STATUS_FORCED) View.GONE else View.VISIBLE
+            addView(button)
         }
     }
 

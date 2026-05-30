@@ -61,7 +61,6 @@ def create_device_profile(
     device_id: int,
     request: ProfileCreate,
     db: Session = Depends(get_db),
-    _admin: str = Depends(require_admin),
 ):
     _get_device_or_404(device_id, db)
     config = _get_or_create_config(db)

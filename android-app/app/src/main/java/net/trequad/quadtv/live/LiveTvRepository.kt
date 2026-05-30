@@ -11,7 +11,16 @@ class LiveTvRepository(
 ) {
     suspend fun loadChannels(): List<LiveChannel> {
         val feed = providerFeedRepository.loadOrRefreshLiveTvFeed() ?: return emptyList()
-        val request = Request.Builder().url(feed.liveTvPlaylistUrl).build()
+        return fetchChannels(feed.liveTvPlaylistUrl)
+    }
+
+    suspend fun loadChannels(forceRefresh: Boolean): List<LiveChannel> {
+        val feed = providerFeedRepository.loadOrRefreshLiveTvFeed(forceRefresh = forceRefresh) ?: return emptyList()
+        return fetchChannels(feed.liveTvPlaylistUrl)
+    }
+
+    private fun fetchChannels(playlistUrl: String): List<LiveChannel> {
+        val request = Request.Builder().url(playlistUrl).build()
         val response = okHttpClient.newCall(request).execute()
         response.use {
             if (!it.isSuccessful) return emptyList()

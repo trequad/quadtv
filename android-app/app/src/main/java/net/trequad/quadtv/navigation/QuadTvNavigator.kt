@@ -5,6 +5,8 @@ import net.trequad.quadtv.player.StreamPlaybackRequest
 
 enum class QuadTvRoute {
     LOGIN,
+    REGISTER,
+    EXPIRED,
     HOME,
     PROFILES,
     LIVE_TV,

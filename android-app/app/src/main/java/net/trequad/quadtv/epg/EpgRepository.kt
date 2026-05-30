@@ -11,7 +11,16 @@ class EpgRepository(
 ) {
     suspend fun loadProgrammes(): List<EpgProgramme> {
         val feed = providerFeedRepository.loadOrRefreshLiveTvFeed() ?: return emptyList()
-        val request = Request.Builder().url(feed.xmltvUrl).build()
+        return fetchProgrammes(feed.xmltvUrl)
+    }
+
+    suspend fun loadProgrammes(forceRefresh: Boolean): List<EpgProgramme> {
+        val feed = providerFeedRepository.loadOrRefreshLiveTvFeed(forceRefresh = forceRefresh) ?: return emptyList()
+        return fetchProgrammes(feed.xmltvUrl)
+    }
+
+    private fun fetchProgrammes(xmltvUrl: String): List<EpgProgramme> {
+        val request = Request.Builder().url(xmltvUrl).build()
         val response = okHttpClient.newCall(request).execute()
         response.use {
             if (!it.isSuccessful) return emptyList()

@@ -3,7 +3,15 @@ package net.trequad.quadtv
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.auth.CustomerLoginFragment
+import net.trequad.quadtv.auth.ExpiredSubscriptionFragment
+import net.trequad.quadtv.core.cache.CustomerSessionCache
+import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.epg.EpgGridFragment
 import net.trequad.quadtv.home.HomeFragment
 import net.trequad.quadtv.jellyfin.JellyfinBrowseFragment
@@ -14,20 +22,43 @@ import net.trequad.quadtv.player.PlayerFragment
 import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.profiles.ProfilePickerFragment
 import net.trequad.quadtv.settings.SettingsFragment
+import net.trequad.quadtv.updates.AppUpdateRepository
 import net.trequad.quadtv.updates.UpdatePromptFragment
 import net.trequad.quadtv.vod.VodBrowseFragment
 
 class MainActivity : FragmentActivity(), QuadTvNavigator {
+    private lateinit var appUpdateRepository: AppUpdateRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appUpdateRepository = buildAppUpdateRepository()
         if (savedInstanceState == null) {
-            navigateTo(QuadTvRoute.LOGIN)
+            checkForRequiredUpdateThenLaunch()
+        }
+    }
+
+    private fun checkForRequiredUpdateThenLaunch() {
+        lifecycleScope.launch {
+            val status = withContext(Dispatchers.IO) {
+                appUpdateRepository.loadUpdateStatus()
+            }
+
+            if (status.forcedUpdateRequired) {
+                showUpdatePrompt(forced = true)
+            } else if (status.updateAvailable) {
+                showUpdatePrompt(forced = false)
+            } else {
+                val prefs = getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, MODE_PRIVATE)
+                val session = CustomerSessionCache(prefs).load()
+                navigateTo(if (session != null) QuadTvRoute.PROFILES else QuadTvRoute.LOGIN)
+            }
         }
     }
 
     override fun navigateTo(route: QuadTvRoute) {
         val fragment: Fragment = when (route) {
-            QuadTvRoute.LOGIN -> CustomerLoginFragment()
+            QuadTvRoute.LOGIN, QuadTvRoute.REGISTER -> CustomerLoginFragment()
+            QuadTvRoute.EXPIRED -> ExpiredSubscriptionFragment()
             QuadTvRoute.HOME -> HomeFragment()
             QuadTvRoute.PROFILES -> ProfilePickerFragment()
             QuadTvRoute.LIVE_TV -> LiveTvFragment()
@@ -59,7 +90,21 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
         supportFragmentManager.popBackStack()
     }
 
+    private fun showUpdatePrompt(forced: Boolean) {
+        supportFragmentManager.beginTransaction()
+            .replace(android.R.id.content, buildUpdatePrompt(forced))
+            .commit()
+    }
+
     private fun buildUpdatePrompt(forced: Boolean): Fragment {
         return if (forced) UpdatePromptFragment.forced() else UpdatePromptFragment.optional()
+    }
+
+    private fun buildAppUpdateRepository(): AppUpdateRepository {
+        val okHttpClient = NetworkModule.provideOkHttpClient()
+        val moshi = NetworkModule.provideMoshi()
+        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
+        val apiService = retrofit.create(AdminApiService::class.java)
+        return AppUpdateRepository(apiService)
     }
 }

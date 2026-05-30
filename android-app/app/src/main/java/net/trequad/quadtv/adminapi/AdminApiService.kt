@@ -12,6 +12,8 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import net.trequad.quadtv.profiles.ProfileCreateRequest
+import net.trequad.quadtv.profiles.QuadTvProfile
 import net.trequad.quadtv.updates.UpdateStatusDto
 
 interface AdminApiService {
@@ -26,6 +28,12 @@ interface AdminApiService {
 
     @GET("api/v1/devices/{deviceId}/profiles")
     suspend fun getDeviceProfiles(@Path("deviceId") deviceId: Int): ProfileListResponse
+
+    @POST("api/v1/devices/{deviceId}/profiles")
+    suspend fun createProfile(
+        @Path("deviceId") deviceId: Int,
+        @Body request: ProfileCreateRequest
+    ): QuadTvProfile
 
     @GET("api/v1/parental/blocklist")
     suspend fun getParentalBlocklist(): ParentalBlocklistDto

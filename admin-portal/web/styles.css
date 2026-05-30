@@ -116,6 +116,8 @@ button {
 }
 button:hover { filter: brightness(1.08); }
 button.ghost { color: var(--white); background: rgba(255, 255, 255, .08); border: 1px solid var(--line); }
+button.danger { background: rgba(255, 92, 122, .18); color: var(--red); border: 1px solid rgba(255, 92, 122, .35); }
+button.danger:hover { background: rgba(255, 92, 122, .32); filter: none; }
 
 .metrics { margin-bottom: 1rem; }
 .metric span { display: block; font-size: 2rem; font-weight: 900; }
@@ -133,7 +135,8 @@ button.ghost { color: var(--white); background: rgba(255, 255, 255, .08); border
 .item-head { display: flex; justify-content: space-between; gap: .75rem; margin-bottom: .35rem; }
 .item-title { font-weight: 850; }
 .item-meta { color: var(--muted); font-size: .86rem; }
-.item-actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; margin-top: .75rem; }
+.item-actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; margin-top: .25rem; }
+.item-section-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: .75rem; }
 
 .pill {
   display: inline-flex;

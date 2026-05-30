@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth import LoginRequest, TokenResponse, authenticate_admin, create_admin_token, create_customer_token, verify_provider_password
+from app.auth import LoginRequest, TokenResponse, authenticate_admin, create_admin_token, create_customer_token, hash_provider_password, verify_provider_password
 from app.database import get_db
-from app.models import ProviderAccountModel, UserModel
+from app.models import UserModel
 from app.routers.subscriptions import _status_for_user
-from app.schemas import CustomerLoginRequest, CustomerLoginResponse
+from app.schemas import CustomerLoginRequest, CustomerLoginResponse, CustomerRegisterRequest
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -19,28 +19,21 @@ def login(request: LoginRequest):
 
 @router.post("/customer-login", response_model=CustomerLoginResponse)
 def customer_login(request: CustomerLoginRequest, db: Session = Depends(get_db)):
-    provider_username = request.username.strip()
-    account = (
-        db.query(ProviderAccountModel)
-        .filter(
-            ProviderAccountModel.provider_type == "live_tv",
-            ProviderAccountModel.provider_username == provider_username,
-        )
+    username = request.username.strip()
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.app_username == username)
         .one_or_none()
     )
-    if account is None or not verify_provider_password(request.password, account.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid provider username or password")
-
-    user = db.get(UserModel, account.user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Provider account is not linked to an active QuadTV user")
+    if user is None or not user.app_password_hash or not verify_provider_password(request.password, user.app_password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
     subscription = _status_for_user(user)
     if subscription.expired:
         return CustomerLoginResponse(
             access_token=None,
             user_id=user.id,
-            provider_username=provider_username,
+            provider_username=user.app_username,
             expired=True,
             expires_on=subscription.expires_on,
             days_remaining=subscription.days_remaining,
@@ -48,10 +41,36 @@ def customer_login(request: CustomerLoginRequest, db: Session = Depends(get_db))
         )
 
     return CustomerLoginResponse(
-        access_token=create_customer_token(user.id, provider_username),
+        access_token=create_customer_token(user.id, user.app_username),
         user_id=user.id,
-        provider_username=provider_username,
+        provider_username=user.app_username,
         expired=False,
         expires_on=subscription.expires_on,
         days_remaining=subscription.days_remaining,
+    )
+
+
+@router.post("/register", response_model=CustomerLoginResponse, status_code=status.HTTP_201_CREATED)
+def register(request: CustomerRegisterRequest, db: Session = Depends(get_db)):
+    username = request.username.strip()
+    if not username or not request.password or not request.display_name.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="All fields are required")
+    if db.query(UserModel).filter(UserModel.app_username == username).one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+
+    user = UserModel(
+        display_name=request.display_name.strip(),
+        app_username=username,
+        app_password_hash=hash_provider_password(request.password),
+        active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return CustomerLoginResponse(
+        access_token=create_customer_token(user.id, user.app_username),
+        user_id=user.id,
+        provider_username=user.app_username,
+        expired=False,
     )

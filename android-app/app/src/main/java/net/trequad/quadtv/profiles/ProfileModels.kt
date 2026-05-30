@@ -13,3 +13,8 @@ data class QuadTvProfile(
 data class ProfileListResponse(
     val items: List<QuadTvProfile>
 )
+
+data class ProfileCreateRequest(
+    @Json(name = "display_name") val displayName: String,
+    val avatar: String = "default"
+)

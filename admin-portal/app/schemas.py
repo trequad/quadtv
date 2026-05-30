@@ -49,18 +49,23 @@ class User(BaseModel):
     id: int
     display_name: str
     email: str | None = None
+    app_username: str | None = None
     active: bool = True
     expires_on: date | None = None
 
 class UserCreate(BaseModel):
     display_name: str
     email: str | None = None
+    app_username: str | None = None
+    app_password: str | None = None
 
 class UserUpdate(BaseModel):
     display_name: str | None = None
     email: str | None = None
     active: bool | None = None
     expires_on: date | None = None
+    app_username: str | None = None
+    app_password: str | None = None
 
 class UserDeviceAssignment(BaseModel):
     device_id: int
@@ -166,11 +171,16 @@ class CustomerLoginRequest(BaseModel):
     username: str
     password: str
 
+class CustomerRegisterRequest(BaseModel):
+    display_name: str
+    username: str
+    password: str
+
 class CustomerLoginResponse(BaseModel):
     access_token: str | None = None
     token_type: str = "bearer"
     user_id: int
-    provider_username: str
+    provider_username: str | None = None
     expired: bool
     expires_on: date | None = None
     days_remaining: int | None = None

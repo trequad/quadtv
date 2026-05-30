@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth import require_admin
+from app.auth import hash_provider_password, require_admin
 from app.database import get_db
 from app.models import DeviceModel, UserModel
 from app.schemas import User, UserCreate, UserDeviceAssignment, UserUpdate
@@ -38,7 +38,13 @@ def create_user(
     db: Session = Depends(get_db),
     _admin: str = Depends(require_admin),
 ):
-    user = UserModel(display_name=request.display_name, email=request.email, active=True)
+    user = UserModel(
+        display_name=request.display_name,
+        email=request.email,
+        active=True,
+        app_username=request.app_username or None,
+        app_password_hash=hash_provider_password(request.app_password) if request.app_password else None,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -54,12 +60,26 @@ def update_user(
 ):
     user = _get_user_or_404(user_id, db)
     updates = request.model_dump(exclude_unset=True)
+    app_password = updates.pop("app_password", None)
+    if app_password is not None:
+        user.app_password_hash = hash_provider_password(app_password)
     for key, value in updates.items():
         setattr(user, key, value)
     db.add(user)
     db.commit()
     db.refresh(user)
     return User.model_validate(user, from_attributes=True)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(require_admin),
+):
+    user = _get_user_or_404(user_id, db)
+    db.delete(user)
+    db.commit()
 
 
 @router.post("/{user_id}/devices/{device_id}", response_model=UserDeviceAssignment)

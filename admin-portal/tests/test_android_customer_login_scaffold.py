@@ -53,6 +53,7 @@ def test_customer_login_and_expired_subscription_fragments_provide_branded_launc
     login = read_android("auth/CustomerLoginFragment.kt")
     expired = read_android("auth/ExpiredSubscriptionFragment.kt")
     main = read_android("MainActivity.kt")
+    navigator = read_android("navigation/QuadTvNavigator.kt")
 
     assert 'class CustomerLoginFragment : Fragment()' in login
     assert 'QuadTV Login' in login
@@ -62,5 +63,40 @@ def test_customer_login_and_expired_subscription_fragments_provide_branded_launc
     assert 'Please contact QuadMedia' in expired
     assert 'class ExpiredSubscriptionFragment : Fragment()' in expired
     assert 'CustomerLoginFragment()' in main
+    assert 'ExpiredSubscriptionFragment()' in main
     assert 'navigateTo(QuadTvRoute.LOGIN)' in main
+    assert 'QuadTvRoute.EXPIRED -> ExpiredSubscriptionFragment()' in main
     assert 'QuadTvRoute.PROFILES -> ProfilePickerFragment()' in main
+    assert 'EXPIRED' in navigator
+
+
+def test_customer_login_fragment_submits_provider_credentials_and_routes_real_results():
+    login = read_android("auth/CustomerLoginFragment.kt")
+
+    assert 'private lateinit var usernameInput: EditText' in login
+    assert 'private lateinit var passwordInput: EditText' in login
+    assert 'private lateinit var statusText: TextView' in login
+    assert 'private lateinit var continueButton: Button' in login
+    assert 'private lateinit var authRepository: CustomerAuthRepository' in login
+    assert 'lifecycleScope.launch' in login
+    assert 'withContext(Dispatchers.IO)' in login
+    assert 'authRepository.login(username, password)' in login
+    assert 'continueButton.isEnabled = false' in login
+    assert 'continueButton.isEnabled = true' in login
+    assert 'if (response.expired)' in login
+    assert 'navigator.navigateTo(QuadTvRoute.EXPIRED)' in login
+    assert 'navigator.navigateTo(QuadTvRoute.PROFILES)' in login
+    assert 'statusText.text = "Enter your username and password."' in login
+    assert 'statusText.text = "Signing in…"' in login
+    assert 'statusText.text = "Login failed. Check your credentials and try again."' in login
+
+
+def test_customer_login_fragment_builds_repository_from_real_retrofit_and_session_cache():
+    login = read_android("auth/CustomerLoginFragment.kt")
+
+    assert 'NetworkModule.provideOkHttpClient()' in login
+    assert 'NetworkModule.provideMoshi()' in login
+    assert 'NetworkModule.provideRetrofit(okHttpClient, moshi)' in login
+    assert 'retrofit.create(AdminApiService::class.java)' in login
+    assert 'CustomerSessionCache.PREFERENCES_NAME' in login
+    assert 'CustomerAuthRepository(apiService, CustomerSessionCache(preferences))' in login

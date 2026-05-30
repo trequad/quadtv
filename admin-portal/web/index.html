@@ -55,9 +55,15 @@
             </div>
             <button id="refresh-button" class="ghost" type="button">Refresh</button>
           </div>
-          <form id="create-user-form" class="inline-form">
-            <input id="user-display-name" placeholder="Display name" required />
-            <input id="user-email" type="email" placeholder="Email (optional)" />
+          <form id="create-user-form" class="stack">
+            <div class="inline-form">
+              <input id="user-display-name" placeholder="Display name" required />
+              <input id="user-email" type="email" placeholder="Email (optional)" />
+            </div>
+            <div class="inline-form">
+              <input id="user-app-username" placeholder="App username (optional)" autocomplete="off" />
+              <input id="user-app-password" type="password" placeholder="App password (optional)" autocomplete="new-password" />
+            </div>
             <button type="submit">Add user</button>
           </form>
           <div id="users-list" class="list"></div>

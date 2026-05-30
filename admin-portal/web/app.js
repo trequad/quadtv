@@ -95,10 +95,11 @@ function renderUsers() {
           <div class="item-head">
             <div>
               <div class="item-title">${escapeHtml(user.display_name)}</div>
-              <div class="item-meta">${escapeHtml(user.email || 'No email')} · User #${user.id}</div>
+              <div class="item-meta">${escapeHtml(user.email || 'No email')} · User #${user.id} · ${user.app_username ? `Login: ${escapeHtml(user.app_username)}` : 'No app login'}</div>
             </div>
             <span class="pill ${status.cls}">${escapeHtml(status.label)}</span>
           </div>
+          <div class="item-section-label">Subscription</div>
           <form class="item-actions" data-user-subscription="${user.id}">
             <input type="date" name="expires_on" value="${escapeHtml(user.expires_on || '')}" />
             <select name="active">
@@ -107,6 +108,15 @@ function renderUsers() {
             </select>
             <button type="submit">Save</button>
           </form>
+          <div class="item-section-label">App login credentials</div>
+          <form class="item-actions" data-user-credentials="${user.id}">
+            <input type="text" name="app_username" placeholder="Username" value="${escapeHtml(user.app_username || '')}" autocomplete="off" />
+            <input type="password" name="app_password" placeholder="Password (leave blank to keep current)" autocomplete="new-password" />
+            <button type="submit">Save</button>
+          </form>
+          <div class="item-actions">
+            <button class="danger" data-delete-user="${user.id}" type="button">Delete user</button>
+          </div>
         </div>`;
     }).join('');
   }
@@ -123,6 +133,31 @@ function renderUsers() {
         }),
       });
       showToast('Subscription updated.');
+      await refreshAll();
+    });
+  });
+  document.querySelectorAll('[data-user-credentials]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = form.dataset.userCredentials;
+      const data = new FormData(form);
+      const body = {};
+      const username = data.get('app_username').trim();
+      const password = data.get('app_password');
+      if (username) body.app_username = username;
+      if (password) body.app_password = password;
+      if (!Object.keys(body).length) { showToast('Enter a username or password to update.'); return; }
+      await api(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      form.querySelector('[name=app_password]').value = '';
+      showToast('Login credentials updated.');
+      await refreshAll();
+    });
+  });
+  document.querySelectorAll('[data-delete-user]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Delete user #${btn.dataset.deleteUser}? This cannot be undone.`)) return;
+      await api(`/users/${btn.dataset.deleteUser}`, { method: 'DELETE' });
+      showToast('User deleted.');
       await refreshAll();
     });
   });
@@ -314,9 +349,16 @@ function bindEvents() {
 
   $('create-user-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    const appUsername = $('user-app-username').value.trim() || null;
+    const appPassword = $('user-app-password').value || null;
     await api('/users', {
       method: 'POST',
-      body: JSON.stringify({ display_name: $('user-display-name').value, email: $('user-email').value || null }),
+      body: JSON.stringify({
+        display_name: $('user-display-name').value,
+        email: $('user-email').value || null,
+        app_username: appUsername,
+        app_password: appPassword,
+      }),
     });
     event.target.reset();
     showToast('User added.');

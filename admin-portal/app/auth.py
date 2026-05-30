@@ -58,7 +58,6 @@ def create_customer_token(user_id: int, provider_username: str) -> str:
         "provider_username": provider_username,
         "scope": "customer",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(hours=TOKEN_TTL_HOURS)).timestamp()),
     }
     encoded_payload = _b64encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     return f"{encoded_payload}.{_sign(encoded_payload)}"

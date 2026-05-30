@@ -141,6 +141,34 @@ def test_android_update_models_repository_and_prompt_are_present():
     assert "UpdatePromptFragment" in main
 
 
+def test_main_activity_checks_private_apk_update_status_before_login():
+    main = read_android("MainActivity.kt")
+
+    assert "private lateinit var appUpdateRepository: AppUpdateRepository" in main
+    assert "appUpdateRepository = buildAppUpdateRepository()" in main
+    assert "checkForRequiredUpdateThenLaunch()" in main
+    assert "lifecycleScope.launch" in main
+    assert "withContext(Dispatchers.IO)" in main
+    assert "appUpdateRepository.loadUpdateStatus()" in main
+    assert "if (status.forcedUpdateRequired)" in main
+    assert "showUpdatePrompt(forced = true)" in main
+    assert "navigateTo(QuadTvRoute.LOGIN)" in main
+    assert "NetworkModule.provideRetrofit(okHttpClient, moshi)" in main
+    assert "retrofit.create(AdminApiService::class.java)" in main
+    assert "AppUpdateRepository(apiService)" in main
+
+
+def test_update_prompt_can_return_to_login_for_optional_updates_but_forced_blocks():
+    prompt = read_android("updates/UpdatePromptFragment.kt")
+    main = read_android("MainActivity.kt")
+
+    assert "Continue to QuadTV" in prompt
+    assert "button.visibility = if (status == STATUS_FORCED) View.GONE else View.VISIBLE" in prompt
+    assert "(activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.LOGIN)" in prompt
+    assert "showUpdatePrompt(forced = false)" in main
+    assert "status.updateAvailable" in main
+
+
 def test_docs_record_private_signed_apk_update_slice():
     readme = README.read_text()
     plan = PLAN.read_text()
