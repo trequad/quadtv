@@ -51,8 +51,10 @@ def test_jellyfin_browse_and_details_fragments_scaffold_home_section_and_playbac
     assert 'class JellyfinBrowseFragment : BrowseSupportFragment()' in browse
     assert 'QuadTV Jellyfin' in browse
     assert 'Jellyfin Libraries' in browse
-    assert 'Browse configured Jellyfin libraries' in browse
+    assert 'Loading Jellyfin' in browse
+    assert 'Recently Added from Jellyfin' in browse
     assert 'JellyfinCardPresenter' in browse
+    assert 'JellyfinRepository' in browse
     assert 'R.color.quadmedia_blue' in browse
 
     assert 'class JellyfinDetailsFragment : Fragment()' in details
