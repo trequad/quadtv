@@ -59,7 +59,7 @@ def test_epg_repository_fetches_xmltv_from_launch_config_and_groups_by_channel()
 def test_epg_grid_fragment_scaffolds_cable_style_time_axis_channel_rows_and_preview_panel():
     source = read_android("epg/EpgGridFragment.kt")
 
-    assert 'class EpgGridFragment : Fragment()' in source
+    assert 'class EpgGridFragment : BrowseSupportFragment()' in source
     assert 'QuadTV Guide' in source
     assert 'time axis' in source.lower()
     assert 'channel rows' in source.lower()
