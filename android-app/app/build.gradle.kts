@@ -22,7 +22,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         ndk {
-            abiFilters += listOf("armeabi-v7a")
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
     }
 
@@ -64,10 +64,9 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
 
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-exoplayer-hls:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
     implementation("org.videolan.android:libvlc-all:3.6.0")
 
     implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
+
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 }

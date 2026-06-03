@@ -33,10 +33,22 @@ def admin_headers(client):
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def create_user(client, headers, display_name="Provider Customer", email="provider@example.test"):
+def create_user(
+    client,
+    headers,
+    display_name="Provider Customer",
+    email="provider@example.test",
+    app_username=None,
+    app_password=None,
+):
     response = client.post(
         "/api/v1/users",
-        json={"display_name": display_name, "email": email},
+        json={
+            "display_name": display_name,
+            "email": email,
+            "app_username": app_username,
+            "app_password": app_password,
+        },
         headers=headers,
     )
     assert response.status_code == 201
@@ -82,10 +94,10 @@ def test_provider_sync_requires_admin_token(tmp_path, monkeypatch):
     assert response.status_code == 401
 
 
-def test_customer_login_accepts_imported_provider_credentials_and_returns_app_session(tmp_path, monkeypatch):
+def test_customer_login_accepts_local_app_credentials_and_returns_app_session(tmp_path, monkeypatch):
     client = build_client(tmp_path, monkeypatch)
     headers = admin_headers(client)
-    user = create_user(client, headers)
+    user = create_user(client, headers, app_username="quad-local-001", app_password="local-pass")
     expires_on = (date.today() + timedelta(days=14)).isoformat()
     client.put(
         f"/api/v1/subscriptions/users/{user['id']}",
@@ -100,7 +112,7 @@ def test_customer_login_accepts_imported_provider_credentials_and_returns_app_se
 
     response = client.post(
         "/api/v1/auth/customer-login",
-        json={"username": "customer001", "password": "123456"},
+        json={"username": "quad-local-001", "password": "local-pass"},
     )
 
     assert response.status_code == 200
@@ -109,16 +121,16 @@ def test_customer_login_accepts_imported_provider_credentials_and_returns_app_se
     assert isinstance(body["access_token"], str)
     assert len(body["access_token"]) > 20
     assert body["user_id"] == user["id"]
-    assert body["provider_username"] == "customer001"
+    assert body["provider_username"] == "quad-local-001"
     assert body["expired"] is False
     assert body["expires_on"] == expires_on
     assert "password" not in str(body).lower()
 
 
-def test_customer_login_rejects_wrong_provider_password(tmp_path, monkeypatch):
+def test_customer_login_rejects_wrong_local_app_password(tmp_path, monkeypatch):
     client = build_client(tmp_path, monkeypatch)
     headers = admin_headers(client)
-    user = create_user(client, headers)
+    user = create_user(client, headers, app_username="quad-local-001", app_password="local-pass")
     client.post(
         f"/api/v1/provider-sync/users/{user['id']}/manual-import",
         json={"provider_username": "customer001", "provider_password": "123456"},
@@ -127,7 +139,7 @@ def test_customer_login_rejects_wrong_provider_password(tmp_path, monkeypatch):
 
     response = client.post(
         "/api/v1/auth/customer-login",
-        json={"username": "customer001", "password": "000000"},
+        json={"username": "quad-local-001", "password": "wrong-local-pass"},
     )
 
     assert response.status_code == 401
@@ -136,7 +148,14 @@ def test_customer_login_rejects_wrong_provider_password(tmp_path, monkeypatch):
 def test_customer_login_returns_expired_status_for_branded_expired_screen(tmp_path, monkeypatch):
     client = build_client(tmp_path, monkeypatch)
     headers = admin_headers(client)
-    user = create_user(client, headers, display_name="Expired Customer", email="expired-provider@example.test")
+    user = create_user(
+        client,
+        headers,
+        display_name="Expired Customer",
+        email="expired-provider@example.test",
+        app_username="expired-local",
+        app_password="local-pass",
+    )
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     client.put(
         f"/api/v1/subscriptions/users/{user['id']}",
@@ -151,7 +170,7 @@ def test_customer_login_returns_expired_status_for_branded_expired_screen(tmp_pa
 
     response = client.post(
         "/api/v1/auth/customer-login",
-        json={"username": "expired001", "password": "654321"},
+        json={"username": "expired-local", "password": "local-pass"},
     )
 
     assert response.status_code == 200

@@ -13,6 +13,10 @@ import net.trequad.quadtv.auth.ExpiredSubscriptionFragment
 import net.trequad.quadtv.core.cache.CustomerSessionCache
 import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.epg.EpgGridFragment
+import net.trequad.quadtv.core.cache.OnboardingCache
+import net.trequad.quadtv.favorites.FavoritesFragment
+import net.trequad.quadtv.favorites.RecentlyViewedFragment
+import net.trequad.quadtv.onboarding.OnboardingFragment
 import net.trequad.quadtv.home.HomeFragment
 import net.trequad.quadtv.jellyfin.JellyfinBrowseFragment
 import net.trequad.quadtv.live.LiveTvFragment
@@ -21,6 +25,7 @@ import net.trequad.quadtv.navigation.QuadTvRoute
 import net.trequad.quadtv.player.PlayerFragment
 import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.profiles.ProfilePickerFragment
+import net.trequad.quadtv.search.MovieSearchFragment
 import net.trequad.quadtv.settings.SettingsFragment
 import net.trequad.quadtv.updates.AppUpdateRepository
 import net.trequad.quadtv.updates.UpdatePromptFragment
@@ -48,10 +53,22 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
             } else if (status.updateAvailable) {
                 showUpdatePrompt(forced = false)
             } else {
-                val prefs = getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, MODE_PRIVATE)
-                val session = CustomerSessionCache(prefs).load()
-                navigateTo(if (session != null) QuadTvRoute.PROFILES else QuadTvRoute.LOGIN)
+                launchLoginOrProfiles()
             }
+        }
+    }
+
+    private fun launchLoginOrProfiles() {
+        if (!OnboardingCache(this).isCompleted()) {
+            navigateTo(QuadTvRoute.ONBOARDING)
+            return
+        }
+        val prefs = getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, MODE_PRIVATE)
+        val session = CustomerSessionCache(prefs).load()
+        if (session != null) {
+            navigateTo(QuadTvRoute.PROFILES)
+        } else {
+            navigateTo(QuadTvRoute.LOGIN)
         }
     }
 
@@ -63,8 +80,12 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
             QuadTvRoute.PROFILES -> ProfilePickerFragment()
             QuadTvRoute.LIVE_TV -> LiveTvFragment()
             QuadTvRoute.EPG -> EpgGridFragment()
+            QuadTvRoute.MOVIE_SEARCH -> MovieSearchFragment()
             QuadTvRoute.VOD -> VodBrowseFragment()
             QuadTvRoute.JELLYFIN -> JellyfinBrowseFragment()
+            QuadTvRoute.FAVORITES -> FavoritesFragment()
+            QuadTvRoute.RECENTLY_VIEWED -> RecentlyViewedFragment()
+            QuadTvRoute.ONBOARDING -> OnboardingFragment()
             QuadTvRoute.SETTINGS -> SettingsFragment()
             QuadTvRoute.PLAYER -> PlayerFragment()
         }

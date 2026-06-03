@@ -1,6 +1,7 @@
 package net.trequad.quadtv.jellyfin
 
 import com.squareup.moshi.Moshi
+import java.net.URLEncoder
 import net.trequad.quadtv.adminapi.AdminConfigRepository
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,12 +26,41 @@ class JellyfinRepository(
         return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
     }
 
+    suspend fun loadMovies(): List<JellyfinItem> {
+        val context = loadContext() ?: return emptyList()
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&Limit=100",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
+    }
+
+    suspend fun loadSeries(): List<JellyfinItem> {
+        val context = loadContext() ?: return emptyList()
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&Limit=100",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
+    }
+
+    suspend fun searchMovies(query: String): List<JellyfinItem> {
+        val context = loadContext() ?: return emptyList()
+        val encodedQuery = URLEncoder.encode(query.trim(), "UTF-8")
+        if (encodedQuery.isBlank()) return emptyList()
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&SearchTerm=$encodedQuery&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&Limit=50",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
+    }
+
     suspend fun buildHlsStream(itemId: String): JellyfinStream? {
         val context = loadContext() ?: return null
         val request = authorizedRequest("${context.baseUrl}/Items/$itemId", context.apiKey)
         val item = executeItemRequest(request) ?: return null
-        val hlsUrl = "${context.baseUrl}/Videos/$itemId/master.m3u8?api_key=${context.apiKey}"
-        return JellyfinStream(itemId = itemId, title = item.name, hlsUrl = hlsUrl)
+        val streamUrl = "${context.baseUrl}/Videos/$itemId/stream?static=true&api_key=${context.apiKey}"
+        return JellyfinStream(itemId = itemId, title = item.name, hlsUrl = streamUrl)
     }
 
     private suspend fun loadContext(): JellyfinContext? {

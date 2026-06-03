@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.auth import hash_provider_password, require_admin
 from app.database import get_db
-from app.models import DeviceModel, UserModel
+from app.jellyfin_client import JellyfinProvisioningError, create_or_update_jellyfin_user
+from app.models import AppConfigModel, DeviceModel, UserModel
 from app.schemas import User, UserCreate, UserDeviceAssignment, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -23,6 +24,28 @@ def _get_device_or_404(device_id: int, db: Session) -> DeviceModel:
     return device
 
 
+def _provision_jellyfin_login_if_configured(request: UserCreate | UserUpdate, db: Session) -> None:
+    username = getattr(request, "app_username", None)
+    password = getattr(request, "app_password", None)
+    if not username or not password:
+        return
+    config = db.get(AppConfigModel, 1)
+    if config is None or not config.jellyfin_base_url or not config.jellyfin_api_key:
+        return
+    try:
+        create_or_update_jellyfin_user(
+            config.jellyfin_base_url,
+            config.jellyfin_api_key,
+            username,
+            password,
+        )
+    except JellyfinProvisioningError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Jellyfin user provisioning failed",
+        ) from exc
+
+
 @router.get("")
 def list_users(
     db: Session = Depends(get_db),
@@ -38,6 +61,7 @@ def create_user(
     db: Session = Depends(get_db),
     _admin: str = Depends(require_admin),
 ):
+    _provision_jellyfin_login_if_configured(request, db)
     user = UserModel(
         display_name=request.display_name,
         email=request.email,

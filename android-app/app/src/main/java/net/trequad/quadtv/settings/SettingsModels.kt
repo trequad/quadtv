@@ -28,7 +28,6 @@ class SettingsOptionsFactory(
     fun buildOptions(profileState: ProfileParentalState): List<SettingsOption> {
         val settings: PlayerSettings = playerSettingsCache.load()
         val engineName = when (settings.defaultEngine) {
-            PlayerEngine.EXOPLAYER -> "ExoPlayer"
             PlayerEngine.VLC -> "VLC"
         }
         val strategyName = when (settings.bufferConfig.strategy) {
@@ -39,7 +38,7 @@ class SettingsOptionsFactory(
             SettingsOption(
                 SettingsSection.PLAYER,
                 "Player",
-                "Choose ExoPlayer or VLC as the bundled default playback engine. Current: $engineName."
+                "Embedded VLC playback only. Current: $engineName."
             ),
             SettingsOption(
                 SettingsSection.BUFFERING,

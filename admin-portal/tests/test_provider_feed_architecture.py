@@ -51,9 +51,13 @@ def test_live_tv_and_epg_repositories_use_per_user_provider_feed_resolver():
     assert "xmltvUrl: String" in feed_models
     assert "fetchedAtMillis: Long" in feed_models
     assert "PROVIDER_FEED_REFRESH_HOURS = 24" in feed_models
-    assert "currentTimeMillis - cached.fetchedAtMillis" in feed_repo
-    assert "deriveLiveTvPlaylistUrl" in feed_repo
-    assert "deriveXmltvUrl" in feed_repo
+    assert "@GET(\"api/v1/provider-feeds/live-tv\")" in read_android("adminapi/AdminApiService.kt")
+    assert "suspend fun getLiveTvProviderFeed(@Header(\"Authorization\") authorization: String): ProviderFeedDto" in read_android("adminapi/AdminApiService.kt")
+    assert "adminApiService.getLiveTvProviderFeed(\"Bearer ${session.accessToken}\")" in feed_repo
+    assert "deriveLiveTvPlaylistUrl" not in feed_repo
+    assert "deriveXmltvUrl" not in feed_repo
+    assert "session.providerUsername" not in feed_repo
+    assert "session.accessToken)" not in feed_repo
     assert "providerPassword" not in feed_repo
     assert "password" not in feed_models.lower()
 
@@ -64,7 +68,7 @@ def test_home_manual_refresh_and_release_update_architecture_are_planned():
     plan = PLAN.read_text()
 
     assert "Refresh Playlist & Guide" in home
-    assert "QuadTV is fetching your playlist and guide from the configured provider DNS" in home
+    assert "refreshPlaylistAndGuide" in home
     assert "raw feed URLs" not in home
     assert "provider password" not in home.lower()
 

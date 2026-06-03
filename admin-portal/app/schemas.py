@@ -167,6 +167,12 @@ class ProviderSyncResponse(BaseModel):
     provider_username: str
     results: list[ProviderAccountStatus]
 
+class ProviderFeedResponse(BaseModel):
+    live_tv_playlist_url: str
+    xmltv_url: str
+    provider_username: str
+    refresh_hours: int
+
 class CustomerLoginRequest(BaseModel):
     username: str
     password: str

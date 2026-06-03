@@ -19,10 +19,10 @@ def test_epg_grid_loads_programmes_from_repository_on_launch():
     assert "loadProgrammesFromRepository()" in source
     assert "lifecycleScope.launch" in source
     assert "withContext(Dispatchers.IO)" in source
-    assert "epgRepository.loadProgrammes()" in source
+    assert "repo.loadProgrammes()" in source
     assert "buildGuideRows(programmes)" in source
     assert "buildEmptyRows()" in source
-    assert "buildErrorRows(\"Unable to load Guide\"" in source
+    assert "buildErrorRows(" in source
 
 
 def test_epg_grid_renders_channel_rows_typed_programme_actions_and_states():
@@ -32,14 +32,13 @@ def test_epg_grid_renders_channel_rows_typed_programme_actions_and_states():
     assert "data class Programme(" in source
     assert "data class Message(" in source
     assert "programmes.groupBy { it.channelId }" in source
-    assert "epgRepository.programmesForChannel" in source
     assert "HeaderItem(channelId.hashCode().toLong()" in source
-    assert "EpgAction.Programme(programme)" in source
+    assert "EpgAction.Programme(it)" in source
     assert "Loading Guide" in source
     assert "No guide data available" in source
-    assert "current / next programme details" in source
-    assert "time axis" in source.lower()
-    assert "preview panel" in source.lower()
+    assert "formatEpgTime" in source
+    assert "startTimeMillis" in source
+    assert "summaryText" in source
 
 
 def test_epg_repository_backed_ui_docs_are_recorded():

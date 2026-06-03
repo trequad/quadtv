@@ -1,11 +1,10 @@
 package net.trequad.quadtv.provider
 
-import java.net.URLEncoder
-import net.trequad.quadtv.adminapi.AdminConfigRepository
+import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.core.cache.CustomerSessionCache
 
 class ProviderFeedRepository(
-    private val adminConfigRepository: AdminConfigRepository,
+    private val adminApiService: AdminApiService,
     private val customerSessionCache: CustomerSessionCache,
     private val clock: () -> Long = { System.currentTimeMillis() }
 ) {
@@ -21,32 +20,13 @@ class ProviderFeedRepository(
         }
 
         val session = customerSessionCache.load() ?: return null
-        val launchConfig = adminConfigRepository.loadLaunchConfig()
-        val providerBaseUrl = launchConfig.liveTvProviderBaseUrl.trimEnd('/')
+        val response = adminApiService.getLiveTvProviderFeed("Bearer ${session.accessToken}")
         val feed = LiveTvProviderFeed(
-            liveTvPlaylistUrl = deriveLiveTvPlaylistUrl(providerBaseUrl, session.providerUsername, session.accessToken),
-            xmltvUrl = deriveXmltvUrl(providerBaseUrl, session.providerUsername, session.accessToken),
+            liveTvPlaylistUrl = response.liveTvPlaylistUrl,
+            xmltvUrl = response.xmltvUrl,
             fetchedAtMillis = currentTimeMillis
         )
         this.cached = feed
         return feed
     }
-
-    fun deriveLiveTvPlaylistUrl(
-        providerBaseUrl: String,
-        providerUsername: String,
-        sessionToken: String
-    ): String {
-        return "$providerBaseUrl/get.php?username=${providerUsername.urlEncode()}&token=${sessionToken.urlEncode()}&type=m3u_plus&output=m3u8"
-    }
-
-    fun deriveXmltvUrl(
-        providerBaseUrl: String,
-        providerUsername: String,
-        sessionToken: String
-    ): String {
-        return "$providerBaseUrl/xmltv.php?username=${providerUsername.urlEncode()}&token=${sessionToken.urlEncode()}"
-    }
-
-    private fun String.urlEncode(): String = URLEncoder.encode(this, "UTF-8")
 }

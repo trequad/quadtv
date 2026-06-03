@@ -35,12 +35,14 @@ def test_launch_config_defaults_continue_to_use_android_constants():
     assert "providerFeedRefreshHours = QuadTvConfig.PROVIDER_FEED_REFRESH_HOURS" in source
 
 
-def test_android_network_security_allows_only_live_provider_http_host():
+def test_android_network_security_allows_only_required_http_hosts():
     manifest = read_text(MANIFEST)
     network_config = read_text(NETWORK_SECURITY_CONFIG)
 
     assert 'android:networkSecurityConfig="@xml/network_security_config"' in manifest
     assert "<domain>by.questreams.com</domain>" in network_config
+    assert "<domain includeSubdomains=\"false\">10.34.1.194</domain>" in network_config
+    assert "<domain includeSubdomains=\"false\">10.34.1.192</domain>" in network_config
     assert 'cleartextTrafficPermitted="true"' in network_config
     assert "livinitup.online" not in network_config
     assert "bobjack" not in network_config.lower()

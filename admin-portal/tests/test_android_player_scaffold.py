@@ -2,18 +2,21 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ANDROID_SRC = PROJECT_ROOT / "android-app/app/src/main/java/net/trequad/quadtv"
+APP_DIR = PROJECT_ROOT / "android-app/app"
 
 
 def read_android(relative_path):
     return (ANDROID_SRC / relative_path).read_text()
 
 
-def test_player_contract_defines_engine_selection_buffering_and_stream_request():
+def test_player_contract_defines_vlc_first_engine_selection_buffering_and_stream_request():
     source = read_android("player/PlayerContract.kt")
 
     assert 'enum class PlayerEngine' in source
-    assert 'EXOPLAYER' in source
     assert 'VLC' in source
+    assert 'MX_PLAYER' not in source
+    assert 'EXOPLAYER' not in source
+    assert 'PlayerView' not in source
     assert 'enum class BufferStrategy' in source
     assert 'ADAPTIVE' in source
     assert 'AGGRESSIVE_PREBUFFER' in source
@@ -32,7 +35,7 @@ def test_player_contract_defines_engine_selection_buffering_and_stream_request()
     assert 'fun release()' in source
 
 
-def test_player_settings_cache_persists_default_engine_and_buffer_preferences():
+def test_player_settings_cache_defaults_to_vlc_and_migrates_old_exoplayer_preference():
     source = read_android("core/cache/PlayerSettingsCache.kt")
 
     assert 'class PlayerSettingsCache' in source
@@ -45,38 +48,35 @@ def test_player_settings_cache_persists_default_engine_and_buffer_preferences():
     assert 'KEY_DEFAULT_ENGINE' in source
     assert 'KEY_BUFFER_SECONDS' in source
     assert 'KEY_BUFFER_STRATEGY' in source
-    assert 'PlayerEngine.EXOPLAYER' in source
+    assert 'PlayerEngine.VLC' in source
+    assert 'it == "EXOPLAYER"' in source
     assert 'BufferStrategy.ADAPTIVE' in source
 
 
-def test_exoplayer_and_vlc_controllers_are_bundled_placeholders_not_external_apps():
-    exo = read_android("player/ExoPlayerController.kt")
+def test_vlc_is_the_only_bundled_controller_and_media3_exoplayer_is_removed():
     vlc = read_android("player/VlcPlayerController.kt")
+    build = (APP_DIR / "build.gradle.kts").read_text()
 
-    assert 'class ExoPlayerController' in exo
-    assert 'QuadTvPlayer' in exo
-    assert 'androidx.media3.exoplayer.ExoPlayer' in exo
-    assert 'androidx.media3.common.MediaItem' in exo
-    assert 'setMediaItem(MediaItem.fromUri(request.url))' in exo
-    assert 'prepare()' in exo
-    assert 'play()' in exo
-
+    assert not (ANDROID_SRC / "player/ExoPlayerController.kt").exists()
+    assert 'media3-exoplayer' not in build
+    assert 'media3-ui' not in build
     assert 'class VlcPlayerController' in vlc
     assert 'QuadTvPlayer' in vlc
     assert 'org.videolan.libvlc.LibVLC' in vlc
     assert 'org.videolan.libvlc.MediaPlayer' in vlc
-    assert 'Media(libVLC, Uri.parse(request.url))' in vlc
+    assert 'val url = request.url.trim()' in vlc
+    assert 'Media(libVLC, Uri.parse(url))' in vlc
+    assert 'media.setHWDecoderEnabled(false, false)' in vlc
+    assert ':network-caching=' in vlc
     assert 'mediaPlayer.play()' in vlc
-    assert 'Intent(' not in exo
     assert 'Intent(' not in vlc
 
 
-def test_playback_failure_handler_selects_alternate_bundled_player_on_failure():
+def test_playback_failure_handler_has_no_external_player_fallback_without_exoplayer_loop():
     source = read_android("player/PlaybackFailureHandler.kt")
 
     assert 'class PlaybackFailureHandler' in source
-    assert 'fun alternateEngine(failedEngine: PlayerEngine): PlayerEngine' in source
-    assert 'PlayerEngine.EXOPLAYER -> PlayerEngine.VLC' in source
-    assert 'PlayerEngine.VLC -> PlayerEngine.EXOPLAYER' in source
-    assert 'fun shouldOfferRetryWithAlternate' in source
-    assert 'return true' in source
+    assert 'fun alternateEngine(failedEngine: PlayerEngine): PlayerEngine? = null' in source
+    assert 'MX_PLAYER' not in source
+    assert 'EXOPLAYER' not in source
+    assert 'fun shouldOfferRetryWithAlternate' not in source

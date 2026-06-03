@@ -11,12 +11,21 @@ class LiveTvRepository(
 ) {
     suspend fun loadChannels(): List<LiveChannel> {
         val feed = providerFeedRepository.loadOrRefreshLiveTvFeed() ?: return emptyList()
-        return fetchChannels(feed.liveTvPlaylistUrl)
+        return fetchChannels(normaliseLivePlaylistOutput(feed.liveTvPlaylistUrl))
     }
 
     suspend fun loadChannels(forceRefresh: Boolean): List<LiveChannel> {
         val feed = providerFeedRepository.loadOrRefreshLiveTvFeed(forceRefresh = forceRefresh) ?: return emptyList()
-        return fetchChannels(feed.liveTvPlaylistUrl)
+        return fetchChannels(normaliseLivePlaylistOutput(feed.liveTvPlaylistUrl))
+    }
+
+    private fun normaliseLivePlaylistOutput(playlistUrl: String): String {
+        val trimmedUrl = playlistUrl.trim()
+        if (trimmedUrl.contains(Regex("[?&]output="))) {
+            return trimmedUrl.replace(Regex("([?&])output=[^&]*"), "\$1output=mpegts")
+        }
+        val separator = if (trimmedUrl.contains("?")) "&" else "?"
+        return "$trimmedUrl${separator}output=mpegts"
     }
 
     private fun fetchChannels(playlistUrl: String): List<LiveChannel> {

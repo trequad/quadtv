@@ -17,11 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
 import net.trequad.quadtv.adminapi.AdminApiService
-import net.trequad.quadtv.adminapi.AdminConfigRepository
 import net.trequad.quadtv.core.cache.CustomerSessionCache
-import net.trequad.quadtv.core.cache.LaunchConfigCache
 import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.provider.ProviderFeedRepository
+import java.util.Calendar
 
 sealed class EpgAction(
     open val label: String,
@@ -29,7 +28,7 @@ sealed class EpgAction(
 ) {
     data class Programme(
         val programme: EpgProgramme,
-        override val label: String = programme.title,
+        override val label: String = epgCardLabel(programme),
         override val description: String = programme.summaryText()
     ) : EpgAction(label, description)
 
@@ -57,37 +56,55 @@ class EpgGridFragment : BrowseSupportFragment() {
     }
 
     private fun loadProgrammesFromRepository() {
+        val repo = epgRepository
         lifecycleScope.launch {
             val programmes = try {
-                withContext(Dispatchers.IO) { epgRepository.loadProgrammes() }
-            } catch (_: Exception) {
-                adapter = buildErrorRows("Unable to load Guide", "Check the provider XMLTV feed and network connection.")
+                withContext(Dispatchers.IO) { repo.loadProgrammes() }
+            } catch (_: Throwable) {
+                adapter = buildErrorRows("Can't load Guide right now", "Check your Wi-Fi and try again.")
                 return@launch
             }
-
-            adapter = if (programmes.isEmpty()) {
-                buildEmptyRows()
-            } else {
-                buildGuideRows(programmes)
+            try {
+                adapter = if (programmes.isEmpty()) buildEmptyRows() else buildGuideRows(programmes)
+            } catch (_: Throwable) {
+                adapter = buildErrorRows("Can't load Guide right now", "Check your Wi-Fi and try again.")
             }
         }
     }
 
     private fun buildGuideRows(programmes: List<EpgProgramme>): ArrayObjectAdapter {
+        val now = System.currentTimeMillis()
+        val halfHourAgo = now - 30 * 60 * 1000L
         val groupedByChannel = programmes.groupBy { it.channelId }
+
+        // Channels with a currently-airing show first, then alphabetical
+        val sortedChannelIds = groupedByChannel.keys.sortedWith(
+            compareByDescending<String> { channelId ->
+                groupedByChannel[channelId]?.any { now in it.startTimeMillis until it.endTimeMillis } == true
+            }.thenBy { it.lowercase() }
+        )
+
         return ArrayObjectAdapter(ListRowPresenter()).apply {
-            add(ListRow(HeaderItem(0, "Guide Layout"), ArrayObjectAdapter(EpgCardPresenter()).apply {
-                add(EpgAction.Message(
-                    "Time axis and preview panel",
-                    "Cable-style time axis across the top, channel rows down the left, program blocks in each row, D-pad focus, and current / next programme details in the preview panel."
-                ))
-            }))
-            groupedByChannel.toSortedMap().forEach { (channelId, channelProgrammes) ->
-                add(ListRow(HeaderItem(channelId.hashCode().toLong(), "Channel $channelId"), ArrayObjectAdapter(EpgCardPresenter()).apply {
-                    epgRepository.programmesForChannel(channelProgrammes, channelId).forEach { programme ->
-                        add(EpgAction.Programme(programme))
+            sortedChannelIds.forEach { channelId ->
+                val channelProgs = groupedByChannel[channelId].orEmpty()
+                    .filter { it.endTimeMillis >= halfHourAgo }
+                    .sortedBy { it.startTimeMillis }
+                    .take(8)
+                if (channelProgs.isEmpty()) return@forEach
+
+                val headerLabel = channelId
+                    .replace(Regex("(?i)channel\\s+\\d+\\s+"), "")  // strip "Channel 22 " prefix
+                    .trimEnd()
+                    .take(22)
+                    .let { if (channelId.length > it.length + 22) "$it…" else it }
+                    .ifBlank { channelId.take(22) }
+
+                add(ListRow(
+                    HeaderItem(channelId.hashCode().toLong(), headerLabel),
+                    ArrayObjectAdapter(EpgCardPresenter()).apply {
+                        channelProgs.forEach { add(EpgAction.Programme(it)) }
                     }
-                }))
+                ))
             }
         }
     }
@@ -95,7 +112,7 @@ class EpgGridFragment : BrowseSupportFragment() {
     private fun buildLoadingRows(): ArrayObjectAdapter {
         return ArrayObjectAdapter(ListRowPresenter()).apply {
             add(ListRow(HeaderItem(0, "QuadTV Guide"), ArrayObjectAdapter(EpgCardPresenter()).apply {
-                add(EpgAction.Message("Loading Guide", "Fetching XMLTV programmes for the active user from the configured provider DNS."))
+                add(EpgAction.Message("Loading Guide…", "Fetching programme listings."))
             }))
         }
     }
@@ -103,7 +120,7 @@ class EpgGridFragment : BrowseSupportFragment() {
     private fun buildEmptyRows(): ArrayObjectAdapter {
         return ArrayObjectAdapter(ListRowPresenter()).apply {
             add(ListRow(HeaderItem(0, "QuadTV Guide"), ArrayObjectAdapter(EpgCardPresenter()).apply {
-                add(EpgAction.Message("No guide data available", "The XMLTV feed returned no programme blocks for the current playlist."))
+                add(EpgAction.Message("No guide data available", "The XMLTV feed returned no programme listings."))
             }))
         }
     }
@@ -121,40 +138,56 @@ class EpgGridFragment : BrowseSupportFragment() {
         val okHttpClient = NetworkModule.provideOkHttpClient()
         val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
         val apiService = retrofit.create(AdminApiService::class.java)
-        val launchPreferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
         val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(launchPreferences))
-        val providerFeedRepository = ProviderFeedRepository(configRepository, CustomerSessionCache(sessionPreferences))
+        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
         return EpgRepository(providerFeedRepository, okHttpClient)
     }
 }
 
+private fun epgCardLabel(programme: EpgProgramme): String {
+    val now = System.currentTimeMillis()
+    val isLive = now in programme.startTimeMillis until programme.endTimeMillis
+    val prefix = if (isLive) "▶ " else ""
+    return "$prefix${formatEpgTime(programme.startTimeMillis)}  ${programme.title}"
+}
+
 private fun EpgProgramme.summaryText(): String {
-    val ratingText = rating?.let { " • $it" }.orEmpty()
-    val categoryText = category?.let { " • $it" }.orEmpty()
-    val matureText = if (isMature) " • Mature" else ""
-    return "Program blocks show current / next programme details$categoryText$ratingText$matureText"
+    val time = "${formatEpgTime(startTimeMillis)} – ${formatEpgTime(endTimeMillis)}"
+    val desc = description?.takeIf { it.isNotBlank() }?.let { "  •  $it" }.orEmpty()
+    val cat = category?.let { "  [$it]" }.orEmpty()
+    val rate = rating?.let { "  $it" }.orEmpty()
+    return "$time$desc$cat$rate"
+}
+
+private fun formatEpgTime(millis: Long): String {
+    val cal = Calendar.getInstance().apply { timeInMillis = millis }
+    val h = cal.get(Calendar.HOUR_OF_DAY)
+    val m = cal.get(Calendar.MINUTE)
+    val ampm = if (h < 12) "AM" else "PM"
+    val h12 = when { h == 0 -> 12; h > 12 -> h - 12; else -> h }
+    return "$h12:${m.toString().padStart(2, '0')} $ampm"
 }
 
 private class EpgCardPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        return ViewHolder(TextView(parent.context).apply {
+        val view = TextView(parent.context).apply {
             isFocusable = true
             isFocusableInTouchMode = true
-            textSize = 21f
+            textSize = 18f
             setTextColor(Color.WHITE)
-            setPadding(36, 28, 36, 28)
-            setBackgroundColor(Color.rgb(44, 95, 124))
-        })
+            setPadding(28, 20, 28, 20)
+            setBackgroundColor(Color.rgb(18, 52, 76))
+            maxLines = 2
+        }
+        view.setOnFocusChangeListener { _, hasFocus ->
+            view.setBackgroundColor(if (hasFocus) Color.rgb(66, 165, 245) else Color.rgb(18, 52, 76))
+        }
+        return ViewHolder(view)
     }
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any?) {
         val action = item as? EpgAction
-        (viewHolder.view as TextView).text = if (action == null) {
-            item?.toString().orEmpty()
-        } else {
-            "${action.label}\n${action.description}"
-        }
+        (viewHolder.view as TextView).text = action?.label ?: item?.toString().orEmpty()
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) = Unit

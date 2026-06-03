@@ -14,7 +14,7 @@ def test_navigation_contract_lists_major_tv_destinations():
     source = read_android("navigation/QuadTvNavigator.kt")
 
     assert "enum class QuadTvRoute" in source
-    for route in ["LOGIN", "HOME", "PROFILES", "LIVE_TV", "EPG", "VOD", "JELLYFIN", "SETTINGS"]:
+    for route in ["LOGIN", "HOME", "PROFILES", "LIVE_TV", "EPG", "MOVIE_SEARCH", "VOD", "JELLYFIN", "SETTINGS"]:
         assert route in source
     assert "interface QuadTvNavigator" in source
     assert "fun navigateTo(route: QuadTvRoute)" in source
@@ -31,8 +31,9 @@ def test_main_activity_maps_routes_to_feature_fragments():
     assert "ProfilePickerFragment()" in source
     assert "LiveTvFragment()" in source
     assert "EpgGridFragment()" in source
-    assert "VodBrowseFragment()" in source
-    assert "JellyfinBrowseFragment()" in source
+    assert "QuadTvRoute.MOVIE_SEARCH -> MovieSearchFragment()" in source
+    assert "QuadTvRoute.VOD -> VodBrowseFragment()" in source
+    assert "QuadTvRoute.JELLYFIN -> JellyfinBrowseFragment()" in source
     assert "SettingsFragment()" in source
     assert "addToBackStack(route.name)" in source
     assert "supportFragmentManager.popBackStack()" in source
@@ -46,25 +47,22 @@ def test_home_fragment_renders_action_cards_and_invokes_navigator():
     assert "QuadTvNavigator" in source
     assert "setOnItemViewClickedListener" in source
     assert "navigateTo(route)" in source
-    for label in ["Live TV", "Guide", "On-Demand", "Jellyfin", "Settings"]:
+    for label in ["Live TV", "Guide", "Movie Search", "Refresh Playlist & Guide", "Settings"]:
         assert label in source
-    for route in ["QuadTvRoute.LIVE_TV", "QuadTvRoute.EPG", "QuadTvRoute.VOD", "QuadTvRoute.JELLYFIN", "QuadTvRoute.SETTINGS"]:
+    for route in ["QuadTvRoute.LIVE_TV", "QuadTvRoute.EPG", "QuadTvRoute.MOVIE_SEARCH", "QuadTvRoute.SETTINGS"]:
         assert route in source
-    assert "Continue Watching" in source
-    assert "Recently Added VOD" in source
-    assert "Announcements" in source
+    assert "Recently Added VOD" not in source
 
 
 def test_live_tv_fragment_exists_as_navigation_target():
     source = read_android("live/LiveTvFragment.kt")
 
-    assert "class LiveTvFragment" in source
-    assert "BrowseSupportFragment" in source
-    assert "QuadTV Live TV" in source
-    assert "channel groups" in source
+    assert "class LiveTvFragment : Fragment()" in source
+    assert "groupContainer" in source
+    assert "channelContainer" in source
     assert "Open Guide" in source
-    assert "Info banner" in source
-    assert "bundled player" in source
+    assert "No information" in source
+    assert "currentProgramme?.title" in source
 
 
 def test_readme_and_plan_document_navigation_scaffold():

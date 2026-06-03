@@ -10,38 +10,39 @@ def read_android(relative_path):
     return (ANDROID_SRC / relative_path).read_text()
 
 
-def test_vod_browse_loads_categories_and_recently_added_from_repository():
+def test_vod_browse_loads_movies_and_series_from_repository():
     source = read_android("vod/VodBrowseFragment.kt")
 
     assert "private val vodRepository: VodRepository by lazy { buildVodRepository() }" in source
-    assert "adapter = buildLoadingRows()" in source
-    assert "configureClickHandling()" in source
-    assert "loadVodFromRepository()" in source
+    assert "loadNav()" in source
     assert "lifecycleScope.launch" in source
     assert "withContext(Dispatchers.IO)" in source
-    assert "vodRepository.loadRecentlyAdded()" in source
-    assert "vodRepository.loadCategories()" in source
-    assert "buildVodRows(recentlyAdded, categories)" in source
-    assert "buildErrorRows(\"Unable to load On-Demand\"" in source
+    assert "repo.loadRecentlyAdded()" in source
+    assert "repo.loadSeries()" in source
+    assert "VodDetailsFragment.newInstance(item)" in source
+    assert "Recently Added" in source
+    assert "TV Series" in source
     assert "Browse categories" not in source
 
 
-def test_vod_browse_has_typed_actions_loading_empty_error_and_player_handoff():
+def test_vod_browse_is_two_pane_fragment_with_category_nav():
     source = read_android("vod/VodBrowseFragment.kt")
 
-    assert "sealed class VodAction" in source
-    assert "data class PlayItem(" in source
-    assert "data class Category(" in source
-    assert "data class Message(" in source
-    assert "buildLoadingRows()" in source
-    assert "buildEmptyRows()" in source
-    assert "buildErrorRows(label: String, description: String)" in source
-    assert "VodDetailsFragment().buildPlaybackRequest(action.item)" in source
-    assert "navigateToPlayer(request)" in source
-    assert "On-Demand Categories" in source
-    assert "Recently Added VOD" in source
-    assert "Toast.makeText" not in source
-    assert "Intent(" not in source
+    assert "class VodBrowseFragment : Fragment()" in source
+    assert "categoryContainer" in source
+    assert "contentContainer" in source
+    assert "ScrollView" in source
+    assert "addCategoryButton" in source
+    assert "selectSection" in source
+    assert "setOnFocusChangeListener" in source
+    assert "BrowseSupportFragment" not in source
+
+
+def test_vod_browse_shows_error_message_not_crash():
+    source = read_android("vod/VodBrowseFragment.kt")
+
+    assert "Can't load On-Demand right now" in source
+    assert "showContentMessage" in source
 
 
 def test_vod_repository_backed_ui_docs_are_recorded():

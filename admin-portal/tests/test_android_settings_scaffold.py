@@ -18,7 +18,7 @@ def test_settings_fragment_exposes_only_user_safe_preferences():
     assert "QuadTV Settings" in source
     assert "QuadMedia" in source
     assert "Player" in source
-    assert "ExoPlayer" in source
+    assert "ExoPlayer" not in source
     assert "VLC" in source
     assert "Buffering" in source
     assert "small / medium / large / custom" in source

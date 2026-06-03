@@ -2,39 +2,44 @@ package net.trequad.quadtv.live
 
 class M3uParser {
     fun parse(playlist: String): List<LiveChannel> {
-        val lines = playlist.lineSequence().map { it.trim() }.filter { it.isNotBlank() }.toList()
         val channels = mutableListOf<LiveChannel>()
-        var index = 0
-        while (index < lines.size) {
-            val extinf = lines[index]
-            if (extinf.startsWith("#EXTINF")) {
-                val streamUrl = lines.drop(index + 1).firstOrNull { !it.startsWith("#") }
-                if (streamUrl != null) {
-                    val attributes = parseAttributes(extinf)
-                    val displayName = extinf.substringAfterLast(',', attributes["tvg-name"].orEmpty()).trim()
-                    val tvgId = attributes["tvg-id"]
-                    val tvgName = attributes["tvg-name"]
-                    val logoUrl = attributes["tvg-logo"]
-                    val groupTitle = attributes["group-title"]
-                    val contentRating = attributes["content-rating"]
-                    channels.add(
-                        LiveChannel(
-                            id = tvgId ?: displayName.ifBlank { streamUrl },
-                            name = displayName.ifBlank { tvgName ?: "Unknown Channel" },
-                            streamUrl = streamUrl,
-                            logoUrl = logoUrl,
-                            groupTitle = groupTitle,
-                            tvgId = tvgId,
-                            tvgName = tvgName,
-                            contentRating = contentRating,
-                            isMature = isMatureChannel(contentRating, groupTitle, displayName)
-                        )
-                    )
+        var pendingExtinf: String? = null
+        playlist.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .forEach { line ->
+                when {
+                    line.startsWith("#EXTINF") -> pendingExtinf = line
+                    pendingExtinf != null && !line.startsWith("#") -> {
+                        channels.add(channelFrom(pendingExtinf.orEmpty(), line))
+                        pendingExtinf = null
+                    }
                 }
             }
-            index += 1
-        }
         return channels
+    }
+
+    private fun channelFrom(extinf: String, streamUrl: String): LiveChannel {
+        val attributes = parseAttributes(extinf)
+        val displayName = extinf.substringAfterLast(',', attributes["tvg-name"].orEmpty()).trim()
+        val tvgId = attributes["tvg-id"]
+        val tvgName = attributes["tvg-name"]
+        val logoUrl = attributes["tvg-logo"]
+        val groupTitle = attributes["group-title"]
+        val contentRating = attributes["content-rating"]
+        val channelNumber = attributes["tvg-chno"]?.toIntOrNull()
+        return LiveChannel(
+            id = tvgId ?: displayName.ifBlank { streamUrl },
+            name = displayName.ifBlank { tvgName ?: "Unknown Channel" },
+            streamUrl = streamUrl,
+            logoUrl = logoUrl,
+            groupTitle = groupTitle,
+            tvgId = tvgId,
+            tvgName = tvgName,
+            channelNumber = channelNumber,
+            contentRating = contentRating,
+            isMature = isMatureChannel(contentRating, groupTitle, displayName)
+        )
     }
 
     private fun parseAttributes(extinf: String): Map<String, String> {

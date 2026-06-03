@@ -15,13 +15,13 @@ def test_live_tv_actions_carry_guide_route_and_channel_payloads():
 
     assert "QuadTvNavigator" in source
     assert "QuadTvRoute.EPG" in source
-    assert "setOnItemViewClickedListener" in source
-    assert "navigateTo(route)" in source
+    assert "sideButton(\"Open Guide\"" in source
+    assert "navigateTo(QuadTvRoute.EPG)" in source
     assert "sealed class LiveTvAction" in source
     assert "data object OpenGuide" in source
     assert "data class Channel" in source
     assert "LiveChannel" in source
-    assert "LiveTvAction.Channel(channel)" in source
+    assert "channelButton(channel," in source
 
 
 def test_live_tv_playback_coordinator_builds_live_stream_requests():
@@ -34,7 +34,7 @@ def test_live_tv_playback_coordinator_builds_live_stream_requests():
     assert "title = channel.name" in source
     assert "isLive = true" in source
     assert "fun describeFallback(channel: LiveChannel)" in source
-    assert "alternate bundled player" in source
+    assert "embedded VLC" in source
 
 
 def test_live_tv_action_docs_are_recorded():

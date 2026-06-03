@@ -11,8 +11,12 @@ enum class QuadTvRoute {
     PROFILES,
     LIVE_TV,
     EPG,
+    MOVIE_SEARCH,
     VOD,
     JELLYFIN,
+    FAVORITES,
+    RECENTLY_VIEWED,
+    ONBOARDING,
     SETTINGS,
     PLAYER
 }

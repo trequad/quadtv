@@ -37,6 +37,7 @@ def test_vod_repository_uses_portal_launch_vod_endpoint_and_okhttp_for_categorie
     assert 'Moshi' in source
     assert 'suspend fun loadCategories(): List<VodCategory>' in source
     assert 'suspend fun loadRecentlyAdded(): List<VodItem>' in source
+    assert 'suspend fun loadSeries(): List<VodItem>' in source
     assert 'suspend fun loadItems(categoryId: String): List<VodItem>' in source
     assert 'suspend fun loadEpisodes(seriesId: String): List<VodEpisode>' in source
     assert 'vodProviderBaseUrl' in source
@@ -45,21 +46,18 @@ def test_vod_repository_uses_portal_launch_vod_endpoint_and_okhttp_for_categorie
     assert 'seriesId' in source
 
 
-def test_vod_browse_and_details_fragments_scaffold_leanback_rows_and_playback_handoff():
+def test_vod_browse_and_details_fragments_scaffold_vertical_layout_and_playback_handoff():
     browse = read_android("vod/VodBrowseFragment.kt")
     details = read_android("vod/VodDetailsFragment.kt")
 
-    assert 'class VodBrowseFragment : BrowseSupportFragment()' in browse
-    assert 'QuadTV On-Demand' in browse
-    assert 'Recently Added VOD' in browse
-    assert 'On-Demand Categories' in browse
+    assert 'class VodBrowseFragment : Fragment()' in browse
+    assert 'On-Demand' in browse
+    assert 'TV Series' in browse
+    assert 'Recently Added' in browse
     assert 'Browse categories' not in browse
     assert 'VodRepository' in browse
-    assert 'R.color.quadmedia_blue' in browse
+    assert 'loadNav()' in browse
+    assert 'itemRow' in browse
 
     assert 'class VodDetailsFragment : Fragment()' in details
-    assert 'QuadTV Details' in details
-    assert 'Poster art' in details
-    assert 'metadata' in details.lower()
-    assert 'playback handoff' in details.lower()
     assert 'StreamPlaybackRequest' in details

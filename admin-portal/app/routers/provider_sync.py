@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth import hash_provider_password, require_admin
+from app.auth import encrypt_provider_secret, hash_provider_password, require_admin
 from app.database import get_db
 from app.models import ProviderAccountModel, UserModel
 from app.providers.base import SUPPORTED_PROVIDER_TYPES
@@ -73,6 +73,7 @@ def manual_import_provider_credentials(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Provider password is required")
 
     password_hash = hash_provider_password(request.provider_password)
+    password_secret = encrypt_provider_secret(request.provider_password)
     now = datetime.now(timezone.utc)
     accounts = []
     for provider_type in PROVIDER_TYPES:
@@ -95,10 +96,12 @@ def manual_import_provider_credentials(
                 provider_type=provider_type,
                 provider_username=provider_username,
                 password_hash=password_hash,
+                provider_password_secret=password_secret,
             )
         else:
             account.user_id = user_id
             account.password_hash = password_hash
+            account.provider_password_secret = password_secret
         account.sync_status = "manual_imported"
         account.last_synced_at = now
         account.last_error = None

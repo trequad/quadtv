@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.adminapi.DeviceRegistrationRepository
+import net.trequad.quadtv.core.cache.ProfileSelectionCache
 import net.trequad.quadtv.core.device.AppVersionProvider
 import net.trequad.quadtv.core.device.DeviceIdentifierProvider
 import net.trequad.quadtv.core.network.NetworkModule
@@ -37,7 +38,7 @@ class ProfilePickerFragment : BrowseSupportFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Who's watching?"
+        title = "QuadTV Profiles"
         headersState = HEADERS_DISABLED
         brandColor = resources.getColor(R.color.quadmedia_blue, null)
 
@@ -58,6 +59,7 @@ class ProfilePickerFragment : BrowseSupportFragment() {
             if (profile.id == ADD_PROFILE_ID) {
                 showCreateProfileDialog()
             } else {
+                ProfileSelectionCache(requireContext().getSharedPreferences(ProfileSelectionCache.PREFERENCES_NAME, android.content.Context.MODE_PRIVATE)).save(profile.id)
                 (requireActivity() as QuadTvNavigator).navigateTo(QuadTvRoute.HOME)
             }
         }
@@ -94,7 +96,7 @@ class ProfilePickerFragment : BrowseSupportFragment() {
                 add(QuadTvProfile(ADD_PROFILE_ID, deviceId, "+ Add Profile", "add", false))
             }
             adapter = ArrayObjectAdapter(ListRowPresenter()).apply {
-                add(ListRow(HeaderItem(0, "Select a profile"), newProfileAdapter))
+                add(ListRow(HeaderItem(0, "Choose who is watching"), newProfileAdapter))
             }
         }
     }

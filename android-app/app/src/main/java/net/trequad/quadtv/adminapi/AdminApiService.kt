@@ -9,6 +9,7 @@ import net.trequad.quadtv.parental.ParentalBlocklistDto
 import net.trequad.quadtv.profiles.ProfileListResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -25,6 +26,9 @@ interface AdminApiService {
 
     @POST("api/v1/auth/customer-login")
     suspend fun customerLogin(@Body request: CustomerLoginRequest): CustomerLoginResponse
+
+    @GET("api/v1/provider-feeds/live-tv")
+    suspend fun getLiveTvProviderFeed(@Header("Authorization") authorization: String): ProviderFeedDto
 
     @GET("api/v1/devices/{deviceId}/profiles")
     suspend fun getDeviceProfiles(@Path("deviceId") deviceId: Int): ProfileListResponse
@@ -49,6 +53,13 @@ interface AdminApiService {
         @Query("current_version_code") currentVersionCode: Int
     ): UpdateStatusDto
 }
+
+data class ProviderFeedDto(
+    @Json(name = "live_tv_playlist_url") val liveTvPlaylistUrl: String,
+    @Json(name = "xmltv_url") val xmltvUrl: String,
+    @Json(name = "provider_username") val providerUsername: String,
+    @Json(name = "refresh_hours") val refreshHours: Int
+)
 
 data class LaunchConfigDto(
     @Json(name = "live_tv_provider_base_url") val liveTvProviderBaseUrl: String,

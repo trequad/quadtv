@@ -8,6 +8,7 @@ import secrets
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from cryptography.fernet import Fernet, InvalidToken
 
 from app.settings import settings
 
@@ -63,6 +64,45 @@ def create_customer_token(user_id: int, provider_username: str) -> str:
     return f"{encoded_payload}.{_sign(encoded_payload)}"
 
 
+def _decode_signed_token(token: str, invalid_detail: str) -> dict:
+    try:
+        encoded_payload, signature = token.split(".", 1)
+        expected_signature = _sign(encoded_payload)
+        if not secrets.compare_digest(signature, expected_signature):
+            raise ValueError("bad signature")
+        return json.loads(_b64decode(encoded_payload))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_detail) from exc
+
+
+def require_customer(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)) -> int:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing customer bearer token")
+    payload = _decode_signed_token(credentials.credentials, "Invalid customer bearer token")
+    if payload.get("scope") != "customer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid customer bearer token")
+    try:
+        return int(payload["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid customer bearer token") from exc
+
+
+def _provider_secret_cipher() -> Fernet:
+    key = base64.urlsafe_b64encode(hashlib.sha256(settings.secret_key.encode("utf-8")).digest())
+    return Fernet(key)
+
+
+def encrypt_provider_secret(secret: str) -> str:
+    return _provider_secret_cipher().encrypt(secret.encode("utf-8")).decode("ascii")
+
+
+def decrypt_provider_secret(secret: str) -> str:
+    try:
+        return _provider_secret_cipher().decrypt(secret.encode("ascii")).decode("utf-8")
+    except InvalidToken as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Provider credential secret cannot be decoded") from exc
+
+
 def hash_provider_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 120_000)
@@ -89,14 +129,7 @@ def authenticate_admin(username: str, password: str) -> bool:
 
 
 def _decode_admin_token(token: str) -> dict:
-    try:
-        encoded_payload, signature = token.split(".", 1)
-        expected_signature = _sign(encoded_payload)
-        if not secrets.compare_digest(signature, expected_signature):
-            raise ValueError("bad signature")
-        payload = json.loads(_b64decode(encoded_payload))
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin bearer token") from exc
+    payload = _decode_signed_token(token, "Invalid admin bearer token")
 
     now = int(datetime.now(timezone.utc).timestamp())
     if payload.get("exp", 0) < now:

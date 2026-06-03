@@ -25,14 +25,14 @@ def test_player_route_is_part_of_navigation_contract_and_main_activity():
 def test_live_tv_channel_click_navigates_to_in_app_player_screen():
     source = read_android("live/LiveTvFragment.kt")
 
-    assert "playbackCoordinator.buildRequest(action.channel)" in source
+    assert "playbackCoordinator.buildRequest(channel," in source
     assert "navigateToPlayer(request)" in source
     assert "Prepared ${request.title} for bundled live playback" not in source
     assert "Toast.makeText" not in source
     assert "Intent(" not in source
 
 
-def test_player_fragment_loads_request_uses_selected_engine_and_no_external_intents():
+def test_player_fragment_loads_request_and_uses_embedded_vlc_only():
     source = read_android("player/PlayerFragment.kt")
 
     assert "class PlayerFragment" in source
@@ -42,12 +42,12 @@ def test_player_fragment_loads_request_uses_selected_engine_and_no_external_inte
     assert "ARG_IS_LIVE" in source
     assert "PlayerSettingsCache" in source
     assert "settings.defaultEngine" in source
-    assert "ExoPlayerController" in source
+    assert "ExoPlayerController" not in source
     assert "VlcPlayerController" in source
     assert "PlaybackFailureHandler" in source
-    assert "retry with ${alternate.name}" in source
-    assert "QuadMedia" in source
-    assert "Intent(" not in source
+    assert "Open in MX Player" not in source
+    assert "Intent(Intent.ACTION_VIEW)" not in source
+    assert "MX_PLAYER" not in source
 
 
 def test_player_route_docs_are_recorded():

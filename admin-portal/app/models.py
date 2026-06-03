@@ -65,6 +65,7 @@ class ProviderAccountModel(Base):
     provider_username: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
     provider_account_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_password_secret: Mapped[str | None] = mapped_column(String(4096), nullable=True)
     sync_status: Mapped[str] = mapped_column(String(80), nullable=False, default="manual_imported")
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)

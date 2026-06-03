@@ -20,7 +20,6 @@ def test_vod_details_navigates_playable_items_to_bundled_player_route():
     assert "navigator?.navigateToPlayer(request)" in source
     assert "subtitle = \"On-Demand\"" in source
     assert "nextTitle = item.rating ?: item.releaseYear?.toString() ?: \"QuadTV VOD\"" in source
-    assert "Toast.makeText" not in source
     assert "Intent(" not in source
 
 
@@ -34,7 +33,6 @@ def test_jellyfin_details_navigates_hls_streams_to_bundled_player_route():
     assert "navigator?.navigateToPlayer(request)" in source
     assert "subtitle = \"Jellyfin\"" in source
     assert "nextTitle = \"QuadMedia library\"" in source
-    assert "Toast.makeText" not in source
     assert "Intent(" not in source
 
 

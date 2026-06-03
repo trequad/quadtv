@@ -6,7 +6,7 @@ import net.trequad.quadtv.player.BufferStrategy
 import net.trequad.quadtv.player.PlayerEngine
 
 data class PlayerSettings(
-    val defaultEngine: PlayerEngine = PlayerEngine.EXOPLAYER,
+    val defaultEngine: PlayerEngine = PlayerEngine.VLC,
     val bufferConfig: BufferConfig = BufferConfig(sizeSeconds = 30, strategy = BufferStrategy.ADAPTIVE),
     val preferredAudioLanguage: String? = null,
     val preferredSubtitleLanguage: String? = null
@@ -27,8 +27,8 @@ class PlayerSettingsCache(
 
     fun load(): PlayerSettings {
         val defaultEngine = sharedPreferences.getString(KEY_DEFAULT_ENGINE, null)
-            ?.let { runCatching { PlayerEngine.valueOf(it) }.getOrNull() }
-            ?: PlayerEngine.EXOPLAYER
+            ?.let { if (it == "EXOPLAYER") PlayerEngine.VLC else runCatching { PlayerEngine.valueOf(it) }.getOrNull() }
+            ?: PlayerEngine.VLC
         val strategy = sharedPreferences.getString(KEY_BUFFER_STRATEGY, null)
             ?.let { runCatching { BufferStrategy.valueOf(it) }.getOrNull() }
             ?: BufferStrategy.ADAPTIVE

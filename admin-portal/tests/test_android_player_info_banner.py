@@ -15,8 +15,12 @@ def test_stream_playback_request_carries_info_banner_metadata():
     live = read_android("live/LiveTvPlaybackCoordinator.kt")
 
     assert "val subtitle: String? = null" in contract
+    assert "val groupTitle: String? = null" in contract
+    assert "val contentTitle: String? = null" in contract
     assert "val nextTitle: String? = null" in contract
     assert "title = channel.name" in live
+    assert "groupTitle = channel.groupTitle" in live
+    assert "contentTitle = currentContentTitle ?: \"Live TV\"" in live
     assert "subtitle = \"Live TV\"" in live
     assert "nextTitle = \"Guide data pending\"" in live
 
@@ -26,6 +30,8 @@ def test_player_fragment_builds_cable_style_info_banner_overlay():
 
     assert "private lateinit var infoBannerContainer: LinearLayout" in source
     assert "private lateinit var infoBannerTitleView: TextView" in source
+    assert "private lateinit var infoBannerGroupView: TextView" in source
+    assert "private lateinit var infoBannerContentView: TextView" in source
     assert "private lateinit var infoBannerNextView: TextView" in source
     assert "private lateinit var infoBannerTimeView: TextView" in source
     assert "private lateinit var infoBannerProgressBar: ProgressBar" in source
@@ -33,7 +39,9 @@ def test_player_fragment_builds_cable_style_info_banner_overlay():
     assert "updateInfoBanner(playableRequest" in source
     assert "SimpleDateFormat(\"h:mm a\"" in source
     assert "progress = if (request.isLive) 50 else 0" in source
-    assert "Current" in source
+    assert "Channel:" in source
+    assert "Group:" in source
+    assert "Now playing:" in source
     assert "Next" in source
     assert "QuadTV" in source
 
@@ -50,6 +58,18 @@ def test_player_fragment_dpad_ok_back_toggle_info_banner():
     assert "hideInfoBanner()" in source
     assert "infoBannerHideHandler.postDelayed" in source
     assert "INFO_BANNER_AUTO_HIDE_MS" in source
+    assert "setOnClickListener { showInfoBanner() }" in source
+
+
+def test_player_info_banner_has_physical_control_buttons():
+    source = read_android("player/PlayerFragment.kt")
+
+    assert "private lateinit var playbackControlRow: LinearLayout" in source
+    assert "buildPlaybackControlRow" in source
+    assert "controlButton(\"Back\")" in source
+    assert "controlButton(\"Channel −\")" in source
+    assert "controlButton(\"Channel +\")" in source
+    assert "onBackPressedDispatcher.onBackPressed()" in source
 
 
 def test_player_info_banner_docs_are_recorded():

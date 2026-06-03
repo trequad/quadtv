@@ -56,15 +56,15 @@ def test_epg_repository_fetches_xmltv_from_launch_config_and_groups_by_channel()
     assert 'channelId' in source
 
 
-def test_epg_grid_fragment_scaffolds_cable_style_time_axis_channel_rows_and_preview_panel():
+def test_epg_grid_fragment_shows_channel_rows_with_times_and_now_playing():
     source = read_android("epg/EpgGridFragment.kt")
 
     assert 'class EpgGridFragment : BrowseSupportFragment()' in source
     assert 'QuadTV Guide' in source
-    assert 'time axis' in source.lower()
-    assert 'channel rows' in source.lower()
-    assert 'program blocks' in source.lower()
-    assert 'preview panel' in source.lower()
-    assert 'D-pad' in source
+    assert 'formatEpgTime' in source
+    assert 'startTimeMillis' in source
+    assert 'channelId' in source
+    assert 'groupedByChannel' in source
     assert 'R.color.quadmedia_blue' in source
+    assert 'AM' in source or 'PM' in source  # real time formatting
     assert 'R.color.quadtv_navy' in source

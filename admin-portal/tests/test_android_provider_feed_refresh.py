@@ -42,9 +42,9 @@ def test_home_manual_refresh_runs_real_coordinator_with_progress_success_and_fai
     assert "lifecycleScope.launch" in home
     assert "withContext(Dispatchers.IO)" in home
     assert "refreshPlaylistAndGuide()" in home
-    assert "Fetching latest playlist and guide from provider" in home
-    assert "Playlist and guide refreshed" in home
-    assert "Unable to refresh playlist and guide" in home
+    assert "Fetching the latest channels and programme guide" in home
+    assert "guide entries are ready" in home
+    assert "Something went wrong" in home
     assert "Close" in home
     assert "raw feed" not in home.lower()
     assert "password" not in home.lower()

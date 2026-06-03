@@ -17,7 +17,7 @@ import net.trequad.quadtv.core.config.QuadTvConfig
 import net.trequad.quadtv.parental.ProfileParentalState
 
 class SettingsFragment : BrowseSupportFragment() {
-    // User-facing settings include Player selection for ExoPlayer or VLC, Buffering
+    // User-facing settings include Player selection for embedded VLC or external MX fallback, Buffering
     // with small / medium / large / custom sizes, Subtitle language, Audio track,
     // Parental controls, Clear watch history, and About/version.
     // They intentionally omit operator-only endpoints and credentials.
@@ -88,7 +88,7 @@ private class SettingsOptionPresenter : Presenter() {
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any?) {
         val option = item as SettingsOption
-        (viewHolder.view as TextView).text = "${option.title}\n${option.description}"
+        (viewHolder.view as TextView).text = option.title
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) = Unit
