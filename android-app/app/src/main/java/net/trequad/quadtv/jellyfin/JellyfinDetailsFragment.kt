@@ -90,12 +90,23 @@ class JellyfinDetailsFragment : Fragment() {
                         setLineSpacing(4f, 1.05f)
                         setPadding(0, 0, 0, 32)
                     })
-                    addView(Button(context).apply {
-                        text = "Play"
-                        textSize = 24f
-                        isFocusable = true
-                        setOnClickListener { playJellyfinItem(item) }
-                    })
+                    if (item.isFolder) {
+                        addView(TextView(context).apply {
+                            text = "Seasons & Episodes"
+                            textSize = 24f
+                            setTypeface(null, android.graphics.Typeface.BOLD)
+                            setTextColor(Color.rgb(66, 165, 245))
+                            setPadding(0, 0, 0, 16)
+                        })
+                        showSeriesSeasons(this, item)
+                    } else {
+                        addView(Button(context).apply {
+                            text = "Play"
+                            textSize = 24f
+                            isFocusable = true
+                            setOnClickListener { playJellyfinItem(item) }
+                        })
+                    }
                     var isFav = mediaStore.isFavorite(item.id, BookmarkedMediaSource.JELLYFIN)
                     addView(Button(context).apply {
                         text = if (isFav) "Remove from Favorites" else "Add to Favorites"
@@ -109,6 +120,64 @@ class JellyfinDetailsFragment : Fragment() {
                     })
                 })
             })
+        }
+    }
+
+    private fun showSeriesSeasons(container: LinearLayout, item: JellyfinItem) {
+        val loading = TextView(requireContext()).apply {
+            text = "Loading seasons…"
+            textSize = 18f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(loading)
+        lifecycleScope.launch {
+            val seasons = try {
+                withContext(Dispatchers.IO) { jellyfinRepository.loadSeasons(item.id) }
+            } catch (_: Throwable) { emptyList() }
+            container.removeView(loading)
+            if (seasons.isEmpty()) {
+                container.addView(TextView(requireContext()).apply {
+                    text = "No episodes found for this series."
+                    textSize = 18f
+                    setTextColor(Color.LTGRAY)
+                    setPadding(0, 0, 0, 16)
+                })
+                return@launch
+            }
+            seasons.forEach { season ->
+                container.addView(TextView(requireContext()).apply {
+                    text = "Season ${season.seasonNumber}"
+                    textSize = 22f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    setPadding(0, 12, 0, 8)
+                })
+                val episodes = try {
+                    withContext(Dispatchers.IO) { jellyfinRepository.loadEpisodes(item.id, season) }
+                } catch (_: Throwable) { emptyList() }
+                episodes.forEach { episode ->
+                    container.addView(Button(requireContext()).apply {
+                        text = "Episode ${episode.episodeNumber}: ${episode.title}"
+                        textSize = 18f
+                        isFocusable = true
+                        setOnClickListener { playEpisode(episode) }
+                    })
+                }
+            }
+        }
+    }
+
+    private fun playEpisode(episode: JellyfinEpisode) {
+        lifecycleScope.launch {
+            val stream = try {
+                withContext(Dispatchers.IO) { jellyfinRepository.buildEpisodeStream(episode) }
+            } catch (_: Throwable) { null }
+            if (stream == null) {
+                android.widget.Toast.makeText(requireContext(), "Can't play this episode right now.", android.widget.Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            navigator?.navigateToPlayer(buildPlaybackRequest(stream))
         }
     }
 
@@ -154,7 +223,7 @@ class JellyfinDetailsFragment : Fragment() {
             overview = args.getString(ARG_OVERVIEW),
             contentRating = args.getString(ARG_RATING),
             productionYear = if (args.containsKey(ARG_YEAR)) args.getInt(ARG_YEAR) else null,
-            isFolder = false,
+            isFolder = args.getBoolean(ARG_IS_FOLDER, false),
             isMature = false
         )
     }
@@ -195,6 +264,7 @@ class JellyfinDetailsFragment : Fragment() {
         private const val ARG_OVERVIEW = "jellyfin_overview"
         private const val ARG_RATING = "jellyfin_rating"
         private const val ARG_YEAR = "jellyfin_year"
+        private const val ARG_IS_FOLDER = "jellyfin_is_folder"
 
         fun newInstance(item: JellyfinItem): JellyfinDetailsFragment {
             return JellyfinDetailsFragment().apply {
@@ -205,6 +275,7 @@ class JellyfinDetailsFragment : Fragment() {
                     putString(ARG_OVERVIEW, item.overview)
                     putString(ARG_RATING, item.contentRating)
                     item.productionYear?.let { putInt(ARG_YEAR, it) }
+                    putBoolean(ARG_IS_FOLDER, item.isFolder)
                 }
             }
         }

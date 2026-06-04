@@ -26,33 +26,69 @@ class JellyfinRepository(
         return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
     }
 
-    suspend fun loadMovies(): List<JellyfinItem> {
-        val context = loadContext() ?: return emptyList()
+    suspend fun loadMovies(): List<JellyfinItem> = loadMoviesPage().items
+
+    suspend fun loadMoviesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
+        val context = loadContext() ?: return emptyPage(startIndex, limit)
         val request = authorizedRequest(
-            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&Limit=100",
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
             context.apiKey
         )
-        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
+        return executeItemsPage(request, context.baseUrl, startIndex, limit)
     }
 
-    suspend fun loadSeries(): List<JellyfinItem> {
-        val context = loadContext() ?: return emptyList()
+    suspend fun loadSeries(): List<JellyfinItem> = loadSeriesPage().items
+
+    suspend fun loadSeriesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
+        val context = loadContext() ?: return emptyPage(startIndex, limit)
         val request = authorizedRequest(
-            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&Limit=100",
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
             context.apiKey
         )
-        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
+        return executeItemsPage(request, context.baseUrl, startIndex, limit)
     }
 
-    suspend fun searchMovies(query: String): List<JellyfinItem> {
-        val context = loadContext() ?: return emptyList()
+    suspend fun searchMovies(query: String): List<JellyfinItem> = searchMoviesPage(query).items
+
+    suspend fun searchMoviesPage(query: String, startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
+        val context = loadContext() ?: return emptyPage(startIndex, limit)
         val encodedQuery = URLEncoder.encode(query.trim(), "UTF-8")
-        if (encodedQuery.isBlank()) return emptyList()
+        if (encodedQuery.isBlank()) return emptyPage(startIndex, limit)
         val request = authorizedRequest(
-            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&SearchTerm=$encodedQuery&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&Limit=50",
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&SearchTerm=$encodedQuery&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
             context.apiKey
         )
-        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(context.baseUrl) }
+        return executeItemsPage(request, context.baseUrl, startIndex, limit)
+    }
+
+    suspend fun loadSeasons(seriesId: String): List<JellyfinSeason> {
+        val context = loadContext() ?: return emptyList()
+        val request = authorizedRequest(
+            "${context.baseUrl}/Shows/$seriesId/Seasons?Fields=Overview,IndexNumber",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.items.orEmpty()
+            .map { it.toSeason() }
+            .sortedBy { it.seasonNumber }
+    }
+
+    suspend fun loadEpisodes(seriesId: String, season: JellyfinSeason): List<JellyfinEpisode> {
+        val context = loadContext() ?: return emptyList()
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?ParentId=${season.id}&Fields=Overview,OfficialRating,IndexNumber,ParentIndexNumber,SeriesId,SeasonId",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.items.orEmpty()
+            .map { it.toEpisode(seriesId, season.id) }
+            .sortedBy { it.episodeNumber }
+    }
+
+    suspend fun loadEpisodes(seriesId: String): List<JellyfinEpisode> {
+        return loadSeasons(seriesId).flatMap { season -> loadEpisodes(seriesId, season) }
+    }
+
+    suspend fun buildEpisodeStream(episode: JellyfinEpisode): JellyfinStream? {
+        return buildHlsStream(episode.id)
     }
 
     suspend fun buildHlsStream(itemId: String): JellyfinStream? {
@@ -85,6 +121,26 @@ class JellyfinRepository(
         }
     }
 
+    private fun executeItemsPage(
+        request: Request,
+        baseUrl: String,
+        startIndex: Int,
+        limit: Int
+    ): JellyfinPage {
+        val response = executeItemsRequest(request) ?: return emptyPage(startIndex, limit)
+        val items = response.items.map { it.toItem(baseUrl) }
+        return JellyfinPage(
+            items = items,
+            totalCount = response.totalRecordCount ?: (startIndex + items.size),
+            startIndex = response.startIndex ?: startIndex,
+            limit = limit
+        )
+    }
+
+    private fun emptyPage(startIndex: Int, limit: Int): JellyfinPage {
+        return JellyfinPage(items = emptyList(), totalCount = 0, startIndex = startIndex, limit = limit)
+    }
+
     private fun executeItemRequest(request: Request): JellyfinApiItem? {
         val response = okHttpClient.newCall(request).execute()
         response.use {
@@ -97,4 +153,8 @@ class JellyfinRepository(
         val baseUrl: String,
         val apiKey: String
     )
+
+    companion object {
+        const val DEFAULT_PAGE_SIZE = 60
+    }
 }

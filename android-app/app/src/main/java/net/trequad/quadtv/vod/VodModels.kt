@@ -17,6 +17,21 @@ data class VodItem(
     val isMature: Boolean = false
 )
 
+data class VodPage(
+    val items: List<VodItem>,
+    val totalCount: Int,
+    val startIndex: Int,
+    val limit: Int
+) {
+    val hasMore: Boolean
+        get() = startIndex + items.size < totalCount
+}
+
+data class VodSeason(
+    val seasonNumber: Int,
+    val episodes: List<VodEpisode>
+)
+
 data class VodEpisode(
     val id: String,
     val seriesId: String,

@@ -23,48 +23,90 @@ class VodRepository(
             .map { VodCategory(id = it.categoryId, name = it.categoryName) }
     }
 
-    suspend fun loadRecentlyAdded(): List<VodItem> {
-        return loadXtreamItems(categoryId = null)
-            .sortedByDescending { it.addedTimestamp ?: 0L }
-            .take(100)
-            .map { it.toVodItem() }
+    suspend fun loadRecentlyAdded(): List<VodItem> = loadRecentlyAddedPage().items
+
+    suspend fun loadRecentlyAddedPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): VodPage {
+        return pageFromItems(
+            items = loadXtreamItems(categoryId = null)
+                .sortedByDescending { it.addedTimestamp ?: 0L }
+                .map { it.toVodItem() },
+            startIndex = startIndex,
+            limit = limit
+        )
     }
 
-    suspend fun loadItems(categoryId: String): List<VodItem> {
-        val context = loadXtreamContext() ?: return getLegacyList("categories/$categoryId/items", VodItem::class.java)
-        return loadXtreamItems(context, categoryId).map { it.toVodItem() }
-    }
+    suspend fun loadItems(categoryId: String): List<VodItem> = loadItemsPage(categoryId).items
 
-    suspend fun searchMovies(query: String): List<VodItem> {
-        val normalized = query.trim().lowercase()
-        if (normalized.isBlank()) return emptyList()
+    suspend fun loadItemsPage(categoryId: String, startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): VodPage {
         val context = loadXtreamContext()
-        if (context != null) {
-            return loadXtreamItems(context, categoryId = null)
-                .map { it.toVodItem() }
-                .filter { item -> item.title.lowercase().contains(normalized) }
-                .distinctBy { it.id }
-                .sortedBy { it.title }
-                .take(100)
+        val items = if (context != null) {
+            loadXtreamItems(context, categoryId).map { it.toVodItem() }
+        } else {
+            getLegacyList("categories/$categoryId/items", VodItem::class.java)
         }
-        val fromRecentlyAdded = loadRecentlyAdded()
-        val fromCategories = loadCategories().flatMap { category -> loadItems(category.id) }
-        return (fromRecentlyAdded + fromCategories)
-            .distinctBy { it.id }
-            .filter { item -> item.title.lowercase().contains(normalized) }
-            .sortedBy { it.title }
+        return pageFromItems(items, startIndex, limit)
     }
 
-    suspend fun loadSeries(): List<VodItem> {
-        val context = loadXtreamContext() ?: return emptyList()
-        return executeList(context.playerApiUrl("get_series"), XtreamSeriesDto::class.java)
+    suspend fun searchMovies(query: String): List<VodItem> = searchMoviesPage(query).items
+
+    suspend fun searchMoviesPage(query: String, startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): VodPage {
+        val normalized = query.trim().lowercase()
+        if (normalized.isBlank()) return emptyPage(startIndex, limit)
+        val context = loadXtreamContext()
+        val items = if (context != null) {
+            loadXtreamItems(context, categoryId = null)
+                .map { it.toVodItem() }
+        } else {
+            val fromRecentlyAdded = loadRecentlyAddedPage(limit = Int.MAX_VALUE).items
+            val fromCategories = loadCategories().flatMap { category -> loadItemsPage(category.id, limit = Int.MAX_VALUE).items }
+            fromRecentlyAdded + fromCategories
+        }
+        return pageFromItems(
+            items = items
+                .distinctBy { it.id }
+                .filter { item -> item.title.lowercase().contains(normalized) }
+                .sortedBy { it.title },
+            startIndex = startIndex,
+            limit = limit
+        )
+    }
+
+    suspend fun loadSeries(): List<VodItem> = loadSeriesPage().items
+
+    suspend fun loadSeriesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): VodPage {
+        val context = loadXtreamContext() ?: return emptyPage(startIndex, limit)
+        val items = executeList(context.playerApiUrl("get_series"), XtreamSeriesDto::class.java)
             .sortedByDescending { it.lastModified?.toLongOrNull() ?: 0L }
-            .take(100)
             .map { it.toVodItem() }
+        return pageFromItems(items, startIndex, limit)
     }
 
     suspend fun loadEpisodes(seriesId: String): List<VodEpisode> {
+        val context = loadXtreamContext()
+        if (context != null) {
+            val request = Request.Builder()
+                .url(context.playerApiUrl("get_series_info", mapOf("series_id" to seriesId)))
+                .build()
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return emptyList()
+                val info = moshi.adapter(XtreamSeriesInfoResponse::class.java).fromJson(response.body?.string().orEmpty())
+                    ?: return emptyList()
+                return info.episodesBySeason
+                    .flatMap { entry ->
+                        val seasonNumber = entry.key.toIntOrNull() ?: 0
+                        entry.value.map { dto -> dto.toVodEpisode(seriesId, seasonNumber, context) }
+                    }
+                    .sortedWith(compareBy<VodEpisode> { it.seasonNumber }.thenBy { it.episodeNumber })
+            }
+        }
         return getLegacyList("series/$seriesId/episodes", VodEpisode::class.java)
+    }
+
+    suspend fun loadSeasons(seriesId: String): List<VodSeason> {
+        return loadEpisodes(seriesId)
+            .groupBy { it.seasonNumber }
+            .toSortedMap()
+            .map { (seasonNumber, episodes) -> VodSeason(seasonNumber = seasonNumber, episodes = episodes.sortedBy { it.episodeNumber }) }
     }
 
     private suspend fun loadXtreamItems(categoryId: String?): List<XtreamVodStreamDto> {
@@ -76,6 +118,21 @@ class VodRepository(
         val extraParams = categoryId?.let { mapOf("category_id" to it) }.orEmpty()
         return executeList(context.playerApiUrl("get_vod_streams", extraParams), XtreamVodStreamDto::class.java)
             .map { dto -> dto.copy(playbackUrl = context.moviePlaybackUrl(dto.streamId, dto.containerExtension)) }
+    }
+
+    private fun pageFromItems(items: List<VodItem>, startIndex: Int, limit: Int): VodPage {
+        val safeStart = startIndex.coerceAtLeast(0)
+        val safeLimit = limit.coerceAtLeast(1)
+        return VodPage(
+            items = items.drop(safeStart).take(safeLimit),
+            totalCount = items.size,
+            startIndex = safeStart,
+            limit = safeLimit
+        )
+    }
+
+    private fun emptyPage(startIndex: Int, limit: Int): VodPage {
+        return VodPage(items = emptyList(), totalCount = 0, startIndex = startIndex, limit = limit)
     }
 
     private suspend fun loadXtreamContext(): XtreamVodContext? {
@@ -109,6 +166,10 @@ class VodRepository(
         val baseUrl = launchConfig.vodProviderBaseUrl.trimEnd('/')
         return executeList("$baseUrl/$path", itemType)
     }
+
+    companion object {
+        const val DEFAULT_PAGE_SIZE = 100
+    }
 }
 
 private data class XtreamCredentials(
@@ -132,7 +193,44 @@ private data class XtreamVodContext(
         val safeExtension = extension?.takeIf { it.isNotBlank() } ?: "mp4"
         return "$baseUrl/movie/${username.encodePath()}/${password.encodePath()}/$streamId.$safeExtension"
     }
+
+    fun seriesPlaybackUrl(episodeId: String, extension: String?): String {
+        val safeExtension = extension?.takeIf { it.isNotBlank() } ?: "mp4"
+        return "$baseUrl/series/${username.encodePath()}/${password.encodePath()}/$episodeId.$safeExtension"
+    }
 }
+
+private data class XtreamSeriesInfoResponse(
+    @Json(name = "episodes") val episodesBySeason: Map<String, List<XtreamEpisodeDto>> = emptyMap()
+)
+
+private data class XtreamEpisodeDto(
+    @Json(name = "id") val id: String? = null,
+    @Json(name = "episode_num") val episodeNum: Int? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "container_extension") val containerExtension: String? = null,
+    @Json(name = "info") val info: XtreamEpisodeInfoDto? = null
+) {
+    fun toVodEpisode(seriesId: String, seasonNumber: Int, context: XtreamVodContext): VodEpisode {
+        val episodeId = id.orEmpty()
+        return VodEpisode(
+            id = episodeId,
+            seriesId = seriesId,
+            title = title?.takeIf { it.isNotBlank() } ?: "Episode ${episodeNum ?: 0}",
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNum ?: 0,
+            streamUrl = context.seriesPlaybackUrl(episodeId, containerExtension),
+            description = info?.plot,
+            rating = info?.rating,
+            isMature = false
+        )
+    }
+}
+
+private data class XtreamEpisodeInfoDto(
+    @Json(name = "plot") val plot: String? = null,
+    @Json(name = "rating") val rating: String? = null
+)
 
 private data class XtreamSeriesDto(
     @Json(name = "series_id") val seriesId: String? = null,

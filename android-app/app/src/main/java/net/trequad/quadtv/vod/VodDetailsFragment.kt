@@ -3,6 +3,7 @@ package net.trequad.quadtv.vod
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -13,13 +14,23 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.adminapi.AdminApiService
+import net.trequad.quadtv.adminapi.AdminConfigRepository
+import net.trequad.quadtv.core.cache.CustomerSessionCache
+import net.trequad.quadtv.core.cache.LaunchConfigCache
+import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.favorites.BookmarkedMediaItem
 import net.trequad.quadtv.favorites.BookmarkedMediaSource
 import net.trequad.quadtv.favorites.MediaBookmarkStore
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.player.StreamPlaybackRequest
+import net.trequad.quadtv.provider.ProviderFeedRepository
 
 class VodDetailsFragment : Fragment() {
     private val navigator: QuadTvNavigator?
@@ -27,6 +38,7 @@ class VodDetailsFragment : Fragment() {
     private val mediaStore: MediaBookmarkStore by lazy {
         MediaBookmarkStore(requireContext().applicationContext)
     }
+    private val vodRepository: VodRepository by lazy { buildVodRepository() }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -94,13 +106,24 @@ class VodDetailsFragment : Fragment() {
                         setLineSpacing(4f, 1.05f)
                         setPadding(0, 0, 0, 32)
                     })
-                    addView(Button(context).apply {
-                        text = "Play"
-                        textSize = 24f
-                        isFocusable = true
-                        isEnabled = item.streamUrl != null
-                        setOnClickListener { playVodItem(item) }
-                    })
+                    if (item.isSeries) {
+                        addView(TextView(context).apply {
+                            text = "Seasons & Episodes"
+                            textSize = 24f
+                            setTypeface(null, Typeface.BOLD)
+                            setTextColor(Color.rgb(66, 165, 245))
+                            setPadding(0, 0, 0, 16)
+                        })
+                        showSeriesSeasons(this, item)
+                    } else {
+                        addView(Button(context).apply {
+                            text = "Play"
+                            textSize = 24f
+                            isFocusable = true
+                            isEnabled = item.streamUrl != null
+                            setOnClickListener { playVodItem(item) }
+                        })
+                    }
                     var isFav = mediaStore.isFavorite(item.id, BookmarkedMediaSource.VOD)
                     addView(Button(context).apply {
                         text = if (isFav) "Remove from Favorites" else "Add to Favorites"
@@ -115,6 +138,61 @@ class VodDetailsFragment : Fragment() {
                 })
             })
         }
+    }
+
+    private fun showSeriesSeasons(container: LinearLayout, item: VodItem) {
+        val loading = TextView(requireContext()).apply {
+            text = "Loading seasons…"
+            textSize = 18f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(loading)
+        lifecycleScope.launch {
+            val seasons = try {
+                withContext(Dispatchers.IO) { vodRepository.loadSeasons(item.id) }
+            } catch (_: Throwable) { emptyList() }
+            container.removeView(loading)
+            if (seasons.isEmpty()) {
+                container.addView(TextView(requireContext()).apply {
+                    text = "No episodes found for this series."
+                    textSize = 18f
+                    setTextColor(Color.LTGRAY)
+                    setPadding(0, 0, 0, 16)
+                })
+                return@launch
+            }
+            seasons.forEach { season ->
+                container.addView(TextView(requireContext()).apply {
+                    text = "Season ${season.seasonNumber}"
+                    textSize = 22f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    setPadding(0, 12, 0, 8)
+                })
+                season.episodes.forEach { episode ->
+                    container.addView(Button(requireContext()).apply {
+                        text = "Episode ${episode.episodeNumber}: ${episode.title}"
+                        textSize = 18f
+                        isFocusable = true
+                        isEnabled = episode.streamUrl != null
+                        setOnClickListener { playEpisode(episode) }
+                    })
+                }
+            }
+        }
+    }
+
+    private fun playEpisode(episode: VodEpisode): Boolean {
+        val url = episode.streamUrl ?: return false
+        navigator?.navigateToPlayer(StreamPlaybackRequest(
+            url = url,
+            title = episode.title,
+            isLive = false,
+            subtitle = "On-Demand • Season ${episode.seasonNumber}",
+            nextTitle = "Episode ${episode.episodeNumber}"
+        ))
+        return true
     }
 
     fun playVodItem(item: VodItem): Boolean {
@@ -167,6 +245,19 @@ class VodDetailsFragment : Fragment() {
         releaseYear = releaseYear, streamUrl = streamUrl,
         isSeries = isSeries, isMature = isMature
     )
+
+    private fun buildVodRepository(): VodRepository {
+        val context = requireContext().applicationContext
+        val okHttpClient = NetworkModule.provideOkHttpClient()
+        val moshi = NetworkModule.provideMoshi()
+        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
+        val apiService = retrofit.create(AdminApiService::class.java)
+        val prefs = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val sessionPrefs = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(prefs))
+        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPrefs))
+        return VodRepository(configRepository, okHttpClient, moshi, providerFeedRepository)
+    }
 
     companion object {
         private const val ARG_ID = "vod_id"
