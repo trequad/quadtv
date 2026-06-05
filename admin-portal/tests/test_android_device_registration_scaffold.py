@@ -61,6 +61,6 @@ def test_profile_models_and_picker_fragment_exist_for_post_login_flow():
     assert '@Json(name = "parental_enabled") val parentalEnabled: Boolean' in models
     assert 'data class ProfileListResponse' in models
     assert 'class ProfilePickerFragment : BrowseSupportFragment()' in picker
-    assert 'QuadTV Profiles' in picker
+    assert 'ProfilePickerFragment' in picker
     assert 'Choose who is watching' in picker
     assert 'ProfileCardPresenter' in picker

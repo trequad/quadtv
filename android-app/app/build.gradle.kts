@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,9 +8,13 @@ plugins {
 }
 
 // Apply Google Services only after Firebase setup adds app/google-services.json.
-// This keeps the scaffold buildable before FCM credentials exist.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
@@ -19,10 +25,20 @@ android {
         applicationId = "net.trequad.quadtv"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        // Version scheme: major.track.patch — track 0=release, 1=debug, 5=beta
+        versionName = "1"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
+    }
+
+    signingConfigs {
+        create("beta") {
+            storeFile = rootProject.file(localProperties["KEYSTORE_FILE"] as? String ?: "quadtv-release.jks")
+            storePassword = localProperties["KEYSTORE_PASSWORD"] as? String ?: ""
+            keyAlias = localProperties["KEY_ALIAS"] as? String ?: "quadtv"
+            keyPassword = localProperties["KEY_PASSWORD"] as? String ?: ""
         }
     }
 
@@ -30,6 +46,16 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("beta")
+            versionNameSuffix = ".0.0"   // → 1.0.0 (production)
+        }
+        create("beta") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("beta")
+            versionNameSuffix = ".5.0"   // → 1.5.0 (beta track)
+        }
+        debug {
+            versionNameSuffix = ".1.0"   // → 1.1.0 (debug track)
         }
     }
 

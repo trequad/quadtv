@@ -23,6 +23,8 @@ build/
 local.properties
 *.apk
 *.aab
+*.jks
+*.keystore
 android-app/app/google-services.json
 
 # IDE / OS

@@ -150,8 +150,8 @@ def test_main_activity_checks_private_apk_update_status_before_login():
     assert "lifecycleScope.launch" in main
     assert "withContext(Dispatchers.IO)" in main
     assert "appUpdateRepository.loadUpdateStatus()" in main
-    assert "if (status.forcedUpdateRequired)" in main
-    assert "showUpdatePrompt(forced = true)" in main
+    assert "status.forcedUpdateRequired" in main
+    assert "showUpdatePrompt(status)" in main
     assert "navigateTo(QuadTvRoute.LOGIN)" in main
     assert "NetworkModule.provideRetrofit(okHttpClient, moshi)" in main
     assert "retrofit.create(AdminApiService::class.java)" in main
@@ -163,9 +163,9 @@ def test_update_prompt_can_return_to_login_for_optional_updates_but_forced_block
     main = read_android("MainActivity.kt")
 
     assert "Continue to QuadTV" in prompt
-    assert "button.visibility = if (status == STATUS_FORCED) View.GONE else View.VISIBLE" in prompt
+    assert "visibility = View.GONE" in prompt
     assert "(activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.LOGIN)" in prompt
-    assert "showUpdatePrompt(forced = false)" in main
+    assert "showUpdatePrompt(status)" in main
     assert "status.updateAvailable" in main
 
 

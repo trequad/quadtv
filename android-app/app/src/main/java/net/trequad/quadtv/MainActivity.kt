@@ -50,10 +50,8 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
                 appUpdateRepository.loadUpdateStatus()
             }
 
-            if (status.forcedUpdateRequired) {
-                showUpdatePrompt(forced = true)
-            } else if (status.updateAvailable) {
-                showUpdatePrompt(forced = false)
+            if (status.forcedUpdateRequired || status.updateAvailable) {
+                showUpdatePrompt(status)
             } else {
                 launchLoginOrProfiles()
             }
@@ -129,14 +127,10 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
         supportFragmentManager.popBackStack()
     }
 
-    private fun showUpdatePrompt(forced: Boolean) {
+    private fun showUpdatePrompt(status: net.trequad.quadtv.updates.UpdateStatus) {
         supportFragmentManager.beginTransaction()
-            .replace(android.R.id.content, buildUpdatePrompt(forced))
+            .replace(android.R.id.content, UpdatePromptFragment.forStatus(status))
             .commit()
-    }
-
-    private fun buildUpdatePrompt(forced: Boolean): Fragment {
-        return if (forced) UpdatePromptFragment.forced() else UpdatePromptFragment.optional()
     }
 
     private fun buildAppUpdateRepository(): AppUpdateRepository {

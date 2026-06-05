@@ -177,6 +177,48 @@
           <div id="notifications-list" class="list"></div>
         </article>
       </section>
+
+      <section class="grid two">
+        <article id="releases-panel" class="card">
+          <p class="eyebrow">OTA updates</p>
+          <h2>Publish release</h2>
+          <p>Beta testers with the app installed will be prompted to download and install the new APK automatically on next launch.</p>
+          <form id="publish-release-form" class="stack">
+            <label>Version name (e.g. 1.0.0-beta2)
+              <input id="release-version-name" placeholder="1.0.0-beta2" required />
+            </label>
+            <label>Version code (integer, must be higher than previous)
+              <input id="release-version-code" type="number" min="1" placeholder="3" required />
+            </label>
+            <label>APK download URL
+              <input id="release-apk-url" type="url" placeholder="https://example.invalid/downloads/QuadTV-beta-x.x.x.apk" required />
+            </label>
+            <label>Minimum supported version code (devices below this are force-updated)
+              <input id="release-min-version-code" type="number" min="1" placeholder="2" required />
+            </label>
+            <label>Changelog
+              <textarea id="release-changelog" rows="3" placeholder="What's new in this release"></textarea>
+            </label>
+            <label class="inline-check">
+              <input id="release-forced" type="checkbox" />
+              Force update (block app until updated)
+            </label>
+            <button type="submit">Publish release</button>
+          </form>
+          <p id="release-status" class="status-line"></p>
+          <div id="releases-list" class="list"></div>
+        </article>
+
+        <article id="release-info-panel" class="card">
+          <p class="eyebrow">Current live release</p>
+          <h2>Active update</h2>
+          <div id="current-release-info" class="list"><p class="muted">No published release yet.</p></div>
+          <p style="margin-top:12px;font-size:0.85em;color:#888">
+            To publish a new beta APK: build the signed APK on Odin, copy it into the quadtv-admin container's
+            <code>/app/web/downloads/</code> folder, then fill in the form on the left and click Publish.
+          </p>
+        </article>
+      </section>
     </section>
 
     <p id="global-status" class="toast" hidden></p>

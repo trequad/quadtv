@@ -346,7 +346,32 @@ async function refreshAll() {
   renderAnnouncements(announcements.items || []);
   renderNotifications(notifications.items || []);
   await loadProviderSyncStatuses();
+  await loadReleases();
   if (state.selectedProfileDeviceId) await loadProfiles(state.selectedProfileDeviceId);
+}
+
+async function loadReleases() {
+  try {
+    const status = await api('/releases/current', { headers: {} });
+    renderCurrentRelease(status);
+  } catch (_) {}
+}
+
+function renderCurrentRelease(status) {
+  const el = $('current-release-info');
+  if (!status || !status.release) {
+    el.innerHTML = '<p class="muted">No published release yet.</p>';
+    return;
+  }
+  const r = status.release;
+  el.innerHTML = `
+    <div class="list-row">
+      <strong>v${r.version_name}</strong> (code ${r.version_code})
+      ${r.forced ? '<span class="pill danger">Force update</span>' : '<span class="pill ok">Optional</span>'}
+      <div style="margin-top:4px;font-size:0.85em;color:#aaa">Min supported code: ${r.minimum_supported_version_code}</div>
+      ${r.changelog ? `<div style="margin-top:6px;font-size:0.9em">${r.changelog}</div>` : ''}
+      <div style="margin-top:6px;font-size:0.8em;word-break:break-all"><a href="${r.apk_url}" target="_blank">${r.apk_url}</a></div>
+    </div>`;
 }
 
 function toIsoOrNull(localDateTime) {
@@ -469,6 +494,33 @@ function bindEvents() {
     event.target.reset();
     showToast('Announcement published.');
     await refreshAll();
+  });
+
+  $('publish-release-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const statusEl = $('release-status');
+    statusEl.textContent = 'Publishing…';
+    try {
+      await api('/releases', {
+        method: 'POST',
+        body: JSON.stringify({
+          version_name: $('release-version-name').value,
+          version_code: parseInt($('release-version-code').value, 10),
+          apk_url: $('release-apk-url').value,
+          minimum_supported_version_code: parseInt($('release-min-version-code').value, 10),
+          changelog: $('release-changelog').value || 'No changelog provided.',
+          forced: $('release-forced').checked,
+          published: true,
+          release_date: null,
+        }),
+      });
+      event.target.reset();
+      statusEl.textContent = 'Release published. Beta testers will be prompted on next app launch.';
+      showToast('Release published.');
+      await loadReleases();
+    } catch (err) {
+      statusEl.textContent = `Error: ${err.message}`;
+    }
   });
 
   $('load-profiles-form').addEventListener('submit', async (event) => {
