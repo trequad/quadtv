@@ -52,12 +52,23 @@ class User(BaseModel):
     app_username: str | None = None
     active: bool = True
     expires_on: date | None = None
+    access_package: str = "full_access"
+    can_access_live_tv: bool = True
+    can_access_vod: bool = True
+    can_access_quaddemand: bool = True
+    can_access_seerr: bool = True
 
 class UserCreate(BaseModel):
     display_name: str
     email: str | None = None
     app_username: str | None = None
     app_password: str | None = None
+    app_pin: str | None = None
+    access_package: str = "full_access"
+    can_access_live_tv: bool | None = None
+    can_access_vod: bool | None = None
+    can_access_quaddemand: bool | None = None
+    can_access_seerr: bool | None = None
 
 class UserUpdate(BaseModel):
     display_name: str | None = None
@@ -66,6 +77,12 @@ class UserUpdate(BaseModel):
     expires_on: date | None = None
     app_username: str | None = None
     app_password: str | None = None
+    app_pin: str | None = None
+    access_package: str | None = None
+    can_access_live_tv: bool | None = None
+    can_access_vod: bool | None = None
+    can_access_quaddemand: bool | None = None
+    can_access_seerr: bool | None = None
 
 class UserDeviceAssignment(BaseModel):
     device_id: int
@@ -108,6 +125,7 @@ class FcmTokenRegistrationResponse(BaseModel):
 class Profile(BaseModel):
     id: int
     device_id: int
+    user_id: int | None = None
     display_name: str
     avatar: str
     parental_enabled: bool = False
@@ -155,6 +173,7 @@ class NotificationHistory(BaseModel):
 class ProviderManualImportRequest(BaseModel):
     provider_username: str
     provider_password: str
+    provider_type: str | None = None
 
 class ProviderAccountStatus(BaseModel):
     provider_type: str
@@ -190,6 +209,11 @@ class CustomerLoginResponse(BaseModel):
     expired: bool
     expires_on: date | None = None
     days_remaining: int | None = None
+    access_package: str = "full_access"
+    can_access_live_tv: bool = True
+    can_access_vod: bool = True
+    can_access_quaddemand: bool = True
+    can_access_seerr: bool = True
     message: str | None = None
 
 

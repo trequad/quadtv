@@ -15,5 +15,10 @@ data class CustomerLoginResponse(
     val expired: Boolean,
     @Json(name = "expires_on") val expiresOn: String?,
     @Json(name = "days_remaining") val daysRemaining: Int?,
+    @Json(name = "access_package") val accessPackage: String = "full_access",
+    @Json(name = "can_access_live_tv") val canAccessLiveTv: Boolean = true,
+    @Json(name = "can_access_vod") val canAccessVod: Boolean = true,
+    @Json(name = "can_access_quaddemand") val canAccessQuaddemand: Boolean = true,
+    @Json(name = "can_access_seerr") val canAccessSeerr: Boolean = true,
     val message: String?
 )

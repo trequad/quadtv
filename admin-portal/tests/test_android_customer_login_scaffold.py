@@ -56,9 +56,10 @@ def test_customer_login_and_expired_subscription_fragments_provide_branded_launc
     navigator = read_android("navigation/QuadTvNavigator.kt")
 
     assert 'class CustomerLoginFragment : Fragment()' in login
-    assert 'QuadTV Login' in login
-    assert 'Provider username' in login
-    assert 'Provider password' in login
+    assert 'R.drawable.quadtv_logo_horizontal' in login
+    assert 'contentDescription = "QuadTV by QuadMedia"' in login
+    assert 'QuadTV username' in login
+    assert 'QuadTV PIN' in login
     assert 'Subscription Expired' in expired
     assert 'Please contact QuadMedia' in expired
     assert 'class ExpiredSubscriptionFragment : Fragment()' in expired
@@ -86,7 +87,7 @@ def test_customer_login_fragment_submits_provider_credentials_and_routes_real_re
     assert 'if (response.expired)' in login
     assert 'navigator.navigateTo(QuadTvRoute.EXPIRED)' in login
     assert 'navigator.navigateTo(QuadTvRoute.PROFILES)' in login
-    assert 'statusText.text = "Enter your username and password."' in login
+    assert 'statusText.text = "Enter your username and PIN."' in login
     assert 'statusText.text = "Signing in…"' in login
     assert 'statusText.text = "Login failed. Check your credentials and try again."' in login
 

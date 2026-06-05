@@ -1,64 +1,73 @@
 package net.trequad.quadtv.settings
 
 import android.content.SharedPreferences
-import net.trequad.quadtv.core.cache.PlayerSettings
-import net.trequad.quadtv.core.cache.PlayerSettingsCache
 import net.trequad.quadtv.parental.ProfileParentalState
-import net.trequad.quadtv.player.BufferStrategy
 import net.trequad.quadtv.player.PlayerEngine
 
 enum class SettingsSection {
-    PLAYER,
-    BUFFERING,
-    LANGUAGES,
+    ACCOUNT,
+    REFRESH,
+    PLAYBACK,
     PARENTAL,
     WATCH_HISTORY,
+    ABOUT
+}
+
+enum class SettingsAction {
+    REFRESH_CONTENT,
+    CLEAR_WATCH_HISTORY,
+    TOGGLE_PARENTAL_RATING_BLOCK,
+    LOG_OUT,
     ABOUT
 }
 
 data class SettingsOption(
     val section: SettingsSection,
     val title: String,
-    val description: String
+    val description: String,
+    val action: SettingsAction
 )
 
-class SettingsOptionsFactory(
-    private val playerSettingsCache: PlayerSettingsCache
-) {
+class SettingsOptionsFactory {
     fun buildOptions(profileState: ProfileParentalState): List<SettingsOption> {
-        val settings: PlayerSettings = playerSettingsCache.load()
-        val engineName = when (settings.defaultEngine) {
-            PlayerEngine.VLC -> "VLC"
+        val parentalCopy = if (profileState.parentalEnabled) {
+            "On — hides R, NC-17, TV-MA, adult/XXX categories, and mature keywords where guide/library ratings are available."
+        } else {
+            "Off — mature ratings are visible for this profile."
         }
-        val strategyName = when (settings.bufferConfig.strategy) {
-            BufferStrategy.ADAPTIVE -> "adaptive"
-            BufferStrategy.AGGRESSIVE_PREBUFFER -> "aggressive pre-buffer"
+        val engineName = when (PlayerEngine.VLC) {
+            PlayerEngine.VLC -> "Built-in QuadTV player powered by VLC"
         }
         return listOf(
             SettingsOption(
-                SettingsSection.PLAYER,
-                "Player",
-                "Embedded VLC playback only. Current: $engineName."
+                SettingsSection.ACCOUNT,
+                "Log out",
+                "Sign out of this QuadTV account and return to the login screen.",
+                SettingsAction.LOG_OUT
             ),
             SettingsOption(
-                SettingsSection.BUFFERING,
-                "Buffering",
-                "Adjust small / medium / large / custom buffer sizes and $strategyName strategy. Current: ${settings.bufferConfig.sizeSeconds}s."
+                SettingsSection.REFRESH,
+                "Refresh channels, guide & library",
+                "Reload Live TV, EPG, VOD, and QuadOnDemand catalog data.",
+                SettingsAction.REFRESH_CONTENT
             ),
             SettingsOption(
-                SettingsSection.LANGUAGES,
-                "Subtitle language / Audio track",
-                "Set preferred subtitle language and audio track for this profile."
+                SettingsSection.PLAYBACK,
+                "Playback",
+                "$engineName (Embedded VLC). Player engine selection is hidden until there is more than one supported in-app engine.",
+                SettingsAction.ABOUT
             ),
             SettingsOption(
                 SettingsSection.PARENTAL,
-                "Parental controls",
-                "Toggle PIN-protected mature-content filtering for profile ${profileState.profileId}. Current: ${if (profileState.parentalEnabled) "enabled" else "disabled"}."
+                "Block mature ratings: ${if (profileState.parentalEnabled) "On" else "Off"}",
+                parentalCopy,
+                SettingsAction.TOGGLE_PARENTAL_RATING_BLOCK
             ),
             SettingsOption(
                 SettingsSection.WATCH_HISTORY,
                 "Clear watch history",
-                "Clear last watched channel and recently watched VOD for this profile."
+                "Clear recently watched Live TV and movie rows for this profile.",
+                SettingsAction.CLEAR_WATCH_HISTORY
             )
         )
     }

@@ -46,7 +46,7 @@ class MovieSearchFragment : Fragment() {
         return LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(64, 48, 64, 48)
-            setBackgroundColor(resources.getColor(R.color.quadtv_charcoal, null))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
 
             addView(TextView(context).apply {
                 text = "Movie Search"

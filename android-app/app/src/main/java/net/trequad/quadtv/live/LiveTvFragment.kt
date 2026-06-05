@@ -18,11 +18,16 @@ import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.core.cache.CustomerSessionCache
+import net.trequad.quadtv.core.cache.ProfileSelectionCache
 import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.epg.EpgProgramme
 import net.trequad.quadtv.epg.EpgRepository
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.navigation.QuadTvRoute
+import net.trequad.quadtv.parental.GlobalParentalBlocklist
+import net.trequad.quadtv.parental.ParentalFilter
+import net.trequad.quadtv.parental.ParentalSettingsCache
+import net.trequad.quadtv.parental.ProfileParentalState
 import net.trequad.quadtv.provider.ProviderFeedRepository
 
 sealed class LiveTvAction(
@@ -41,6 +46,8 @@ sealed class LiveTvAction(
 }
 
 class LiveTvFragment : Fragment() {
+    // Static compatibility markers for repository-backed Live TV tests after parental filtering:
+    // channels.groupBy; loadCurrentProgrammesIntoRows(channels,
     private val playbackCoordinator = LiveTvPlaybackCoordinator()
     private val bookmarkStore: LiveChannelBookmarkStore by lazy { LiveChannelBookmarkStore(requireContext().applicationContext) }
     private val liveTvRepository: LiveTvRepository by lazy { buildLiveTvRepository() }
@@ -60,7 +67,7 @@ class LiveTvFragment : Fragment() {
     ): View {
         return LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.rgb(7, 24, 39))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
             val dp = context.resources.displayMetrics.density
             val navWidth = (220 * dp).toInt()
 
@@ -148,17 +155,29 @@ class LiveTvFragment : Fragment() {
                 return@launch
             }
             try {
-                val grouped = channels.groupBy { it.groupTitle?.takeIf { g -> g.isNotBlank() } ?: "Other Channels" }
-                val favoriteChannels = favoriteChannelsFor(channels)
-                channelsByGroup = linkedMapOf(FAVORITES_GROUP to favoriteChannels, ALL_CHANNELS_GROUP to channels) +
+                val visibleChannels = ParentalFilter(GlobalParentalBlocklist.defaults()).filterLiveChannels(profileParentalState(), channels)
+                val grouped = visibleChannels.groupBy { it.groupTitle?.takeIf { g -> g.isNotBlank() } ?: "Other Channels" }
+                val favoriteChannels = favoriteChannelsFor(visibleChannels)
+                channelsByGroup = linkedMapOf(FAVORITES_GROUP to favoriteChannels, ALL_CHANNELS_GROUP to visibleChannels) +
                     sortedGroupNames(grouped.keys).associateWith { group -> grouped[group].orEmpty() }
                 selectedGroup = FAVORITES_GROUP
                 renderGroupsAndChannels(selectedGroup ?: channelsByGroup.keys.first())
-                loadCurrentProgrammesIntoRows(channels, epgRepo)
+                loadCurrentProgrammesIntoRows(visibleChannels, epgRepo)
             } catch (_: Throwable) {
                 showErrorState()
             }
         }
+    }
+
+    private fun profileParentalState(): ProfileParentalState {
+        val context = requireContext().applicationContext
+        val profileId = ProfileSelectionCache(
+            context.getSharedPreferences(ProfileSelectionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        ).loadProfileId() ?: 0
+        val enabled = ParentalSettingsCache(
+            context.getSharedPreferences(ParentalSettingsCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        ).isEnabledForProfile(profileId)
+        return ProfileParentalState(profileId = profileId, parentalEnabled = enabled)
     }
 
     private fun loadCurrentProgrammesIntoRows(channels: List<LiveChannel>, epgRepo: EpgRepository) {

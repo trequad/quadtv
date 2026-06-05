@@ -188,6 +188,14 @@ def test_onboarding_fragment_has_three_pages_with_skip_and_get_started():
     assert "QuadTvRoute.LOGIN" in onboarding
 
 
+def test_onboarding_fragment_explains_seerr_requests_and_quaddemand():
+    onboarding = read_android("onboarding/OnboardingFragment.kt")
+    assert "Seerr" in onboarding
+    assert "request movies and shows" in onboarding
+    assert "approved requests" in onboarding
+    assert "QuadOnDemand" in onboarding
+
+
 def test_onboarding_route_exists_in_navigator():
     nav = read_android("navigation/QuadTvNavigator.kt")
     assert "ONBOARDING" in nav

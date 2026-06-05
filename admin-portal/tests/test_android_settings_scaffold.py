@@ -15,15 +15,14 @@ def test_settings_fragment_exposes_only_user_safe_preferences():
 
     assert "class SettingsFragment" in source
     assert "BrowseSupportFragment" in source
-    assert "QuadTV Settings" in source
-    assert "QuadMedia" in source
-    assert "Player" in source
-    assert "ExoPlayer" not in source
+    assert 'title = "Settings"' in source
+    assert "QuadTvConfig.PARENT_BRAND" in source
+    assert "Playback" in source
     assert "VLC" in source
-    assert "Buffering" in source
-    assert "small / medium / large / custom" in source
-    assert "Subtitle language" in source
-    assert "Audio track" in source
+    assert "Buffering" not in source
+    assert "small / medium / large / custom" not in source
+    assert "Subtitle language" not in source
+    assert "Audio track" not in source
     assert "Parental controls" in source
     assert "Clear watch history" in source
     assert "About QuadTV" in source
@@ -45,16 +44,15 @@ def test_settings_models_connect_to_player_and_profile_preferences():
     source = read_android("settings/SettingsModels.kt")
 
     assert "enum class SettingsSection" in source
-    assert "PLAYER" in source
-    assert "BUFFERING" in source
-    assert "LANGUAGES" in source
+    assert "ACCOUNT" in source
+    assert "REFRESH" in source
+    assert "PLAYBACK" in source
     assert "PARENTAL" in source
     assert "WATCH_HISTORY" in source
     assert "ABOUT" in source
     assert "data class SettingsOption" in source
-    assert "PlayerSettingsCache" in source
+    assert "SettingsAction" in source
     assert "PlayerEngine" in source
-    assert "BufferStrategy" in source
     assert "ProfileParentalState" in source
     assert "class ProfilePreferencesClearAction" in source
     assert "fun clearWatchHistory(profileId: Int)" in source

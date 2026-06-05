@@ -1,5 +1,6 @@
 package net.trequad.quadtv.parental
 
+import android.content.SharedPreferences
 import com.squareup.moshi.Json
 import net.trequad.quadtv.epg.EpgProgramme
 import net.trequad.quadtv.jellyfin.JellyfinItem
@@ -44,6 +45,30 @@ data class ProfileParentalState(
     val profileId: Int,
     val parentalEnabled: Boolean
 )
+
+class ParentalSettingsCache(
+    private val sharedPreferences: SharedPreferences
+) {
+    fun isEnabledForProfile(profileId: Int): Boolean {
+        return sharedPreferences.getBoolean(key(profileId), false)
+    }
+
+    fun setEnabledForProfile(profileId: Int, enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(key(profileId), enabled).apply()
+    }
+
+    fun toggleForProfile(profileId: Int): Boolean {
+        val enabled = !isEnabledForProfile(profileId)
+        setEnabledForProfile(profileId, enabled)
+        return enabled
+    }
+
+    private fun key(profileId: Int) = "profile_${profileId}_parental_rating_block"
+
+    companion object {
+        const val PREFERENCES_NAME = "quadtv_parental_settings"
+    }
+}
 
 class ParentalFilter(
     private val blocklist: GlobalParentalBlocklist

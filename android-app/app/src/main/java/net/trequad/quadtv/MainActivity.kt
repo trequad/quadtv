@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.auth.CustomerLoginFragment
 import net.trequad.quadtv.auth.ExpiredSubscriptionFragment
+import net.trequad.quadtv.auth.SubscriptionRequiredFragment
 import net.trequad.quadtv.core.cache.CustomerSessionCache
 import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.epg.EpgGridFragment
@@ -73,10 +74,25 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
         }
     }
 
+    private fun guardSubscriptionRoute(route: QuadTvRoute): QuadTvRoute {
+        val prefs = getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, MODE_PRIVATE)
+        val session = CustomerSessionCache(prefs).load()
+        if (session == null) return route
+        return when (route) {
+            QuadTvRoute.LIVE_TV, QuadTvRoute.EPG -> if (session.canAccessLiveTv) route else QuadTvRoute.SUBSCRIPTION_REQUIRED
+            QuadTvRoute.VOD, QuadTvRoute.MOVIE_SEARCH -> if (session.canAccessVod) route else QuadTvRoute.SUBSCRIPTION_REQUIRED
+            QuadTvRoute.JELLYFIN -> if (session.canAccessQuaddemand) route else QuadTvRoute.SUBSCRIPTION_REQUIRED
+            QuadTvRoute.SEERR -> if (session.canAccessSeerr) route else QuadTvRoute.SUBSCRIPTION_REQUIRED
+            else -> route
+        }
+    }
+
     override fun navigateTo(route: QuadTvRoute) {
-        val fragment: Fragment = when (route) {
+        val guardedRoute = guardSubscriptionRoute(route)
+        val fragment: Fragment = when (guardedRoute) {
             QuadTvRoute.LOGIN, QuadTvRoute.REGISTER -> CustomerLoginFragment()
             QuadTvRoute.EXPIRED -> ExpiredSubscriptionFragment()
+            QuadTvRoute.SUBSCRIPTION_REQUIRED -> SubscriptionRequiredFragment()
             QuadTvRoute.HOME -> HomeFragment()
             QuadTvRoute.PROFILES -> ProfilePickerFragment()
             QuadTvRoute.LIVE_TV -> LiveTvFragment()
@@ -95,8 +111,8 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
         val transaction = supportFragmentManager.beginTransaction()
             .replace(android.R.id.content, fragment)
 
-        if (route != QuadTvRoute.LOGIN) {
-            transaction.addToBackStack(route.name)
+        if (guardedRoute != QuadTvRoute.LOGIN) {
+            transaction.addToBackStack(guardedRoute.name)
         }
 
         transaction.commit()

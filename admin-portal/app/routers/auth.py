@@ -27,7 +27,11 @@ def customer_login(request: CustomerLoginRequest, db: Session = Depends(get_db))
         .filter(UserModel.app_username == username)
         .one_or_none()
     )
-    if user is None or not user.app_password_hash or not verify_provider_password(request.password, user.app_password_hash):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+    password_ok = bool(user.app_password_hash and verify_provider_password(request.password, user.app_password_hash))
+    pin_ok = bool(user.app_pin_hash and verify_provider_password(request.password, user.app_pin_hash))
+    if not (password_ok or pin_ok):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
     subscription = _status_for_user(user)
@@ -39,6 +43,11 @@ def customer_login(request: CustomerLoginRequest, db: Session = Depends(get_db))
             expired=True,
             expires_on=subscription.expires_on,
             days_remaining=subscription.days_remaining,
+            access_package=user.access_package,
+            can_access_live_tv=user.can_access_live_tv,
+            can_access_vod=user.can_access_vod,
+            can_access_quaddemand=user.can_access_quaddemand,
+            can_access_seerr=user.can_access_seerr,
             message="Subscription expired. Please contact QuadMedia.",
         )
 
@@ -49,6 +58,11 @@ def customer_login(request: CustomerLoginRequest, db: Session = Depends(get_db))
         expired=False,
         expires_on=subscription.expires_on,
         days_remaining=subscription.days_remaining,
+        access_package=user.access_package,
+        can_access_live_tv=user.can_access_live_tv,
+        can_access_vod=user.can_access_vod,
+        can_access_quaddemand=user.can_access_quaddemand,
+        can_access_seerr=user.can_access_seerr,
     )
 
 

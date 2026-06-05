@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -44,38 +45,49 @@ class CustomerLoginFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(96, 72, 96, 72)
-            setBackgroundColor(resources.getColor(R.color.quadtv_navy, null))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
+
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.quadtv_logo_horizontal)
+                contentDescription = "QuadTV by QuadMedia"
+                adjustViewBounds = true
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    132
+                )
+            })
 
             addView(TextView(context).apply {
-                text = "QuadTV Login"
-                textSize = 34f
+                text = "Login"
+                textSize = 28f
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
             })
 
             addView(TextView(context).apply {
-                text = "Sign in with your QuadMedia provider credentials."
+                text = "Sign in with your QuadTV username and PIN."
                 textSize = 18f
                 setTextColor(resources.getColor(R.color.quadtv_white, null))
                 gravity = Gravity.CENTER
             })
 
             usernameInput = EditText(context).apply {
-                hint = "Provider username"
+                hint = "QuadTV username"
                 inputType = InputType.TYPE_CLASS_TEXT
                 setSingleLine(true)
             }
             addView(usernameInput)
 
             passwordInput = EditText(context).apply {
-                hint = "Provider password"
-                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                hint = "QuadTV PIN"
+                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
                 setSingleLine(true)
             }
             addView(passwordInput)
 
             statusText = TextView(context).apply {
-                text = "Enter your username and password."
+                text = "Enter your username and PIN."
                 textSize = 16f
                 setTextColor(resources.getColor(R.color.quadtv_white, null))
                 gravity = Gravity.CENTER
@@ -95,7 +107,7 @@ class CustomerLoginFragment : Fragment() {
         val password = passwordInput.text.toString()
 
         if (username.isBlank() || password.isBlank()) {
-            statusText.text = "Enter your username and password."
+            statusText.text = "Enter your username and PIN."
             return
         }
 

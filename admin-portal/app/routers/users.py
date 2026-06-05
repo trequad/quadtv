@@ -9,6 +9,44 @@ from app.schemas import User, UserCreate, UserDeviceAssignment, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+ACCESS_PACKAGES = {
+    "live_tv_only": {
+        "can_access_live_tv": True,
+        "can_access_vod": False,
+        "can_access_quaddemand": False,
+        "can_access_seerr": False,
+    },
+    "live_tv_vod": {
+        "can_access_live_tv": True,
+        "can_access_vod": True,
+        "can_access_quaddemand": False,
+        "can_access_seerr": False,
+    },
+    "live_tv_quaddemand": {
+        "can_access_live_tv": True,
+        "can_access_vod": False,
+        "can_access_quaddemand": True,
+        "can_access_seerr": False,
+    },
+    "full_access": {
+        "can_access_live_tv": True,
+        "can_access_vod": True,
+        "can_access_quaddemand": True,
+        "can_access_seerr": True,
+    },
+}
+
+
+def _entitlements_for_request(request: UserCreate | UserUpdate, current: UserModel | None = None) -> dict[str, bool | str]:
+    access_package = getattr(request, "access_package", None) or (current.access_package if current else "full_access")
+    if access_package not in ACCESS_PACKAGES:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown access package")
+    result: dict[str, bool | str] = {"access_package": access_package}
+    for key, default_value in ACCESS_PACKAGES[access_package].items():
+        value = getattr(request, key, None)
+        result[key] = default_value if value is None else value
+    return result
+
 
 def _get_user_or_404(user_id: int, db: Session) -> UserModel:
     user = db.get(UserModel, user_id)
@@ -62,12 +100,15 @@ def create_user(
     _admin: str = Depends(require_admin),
 ):
     _provision_jellyfin_login_if_configured(request, db)
+    entitlements = _entitlements_for_request(request)
     user = UserModel(
         display_name=request.display_name,
         email=request.email,
         active=True,
         app_username=request.app_username or None,
         app_password_hash=hash_provider_password(request.app_password) if request.app_password else None,
+        app_pin_hash=hash_provider_password(request.app_pin) if request.app_pin else None,
+        **entitlements,
     )
     db.add(user)
     db.commit()
@@ -85,8 +126,17 @@ def update_user(
     user = _get_user_or_404(user_id, db)
     updates = request.model_dump(exclude_unset=True)
     app_password = updates.pop("app_password", None)
+    app_pin = updates.pop("app_pin", None)
     if app_password is not None:
         user.app_password_hash = hash_provider_password(app_password)
+    if app_pin is not None:
+        user.app_pin_hash = hash_provider_password(app_pin)
+    entitlement_keys = {"access_package", "can_access_live_tv", "can_access_vod", "can_access_quaddemand", "can_access_seerr"}
+    if entitlement_keys.intersection(updates):
+        for key in entitlement_keys:
+            updates.pop(key, None)
+        for key, value in _entitlements_for_request(request, current=user).items():
+            setattr(user, key, value)
     for key, value in updates.items():
         setattr(user, key, value)
     db.add(user)

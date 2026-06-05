@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
@@ -17,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.trequad.quadtv.R
 import net.trequad.quadtv.core.config.QuadTvConfig
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,7 +39,7 @@ class SeerrFragment : Fragment() {
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(7, 24, 39))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -45,12 +47,20 @@ class SeerrFragment : Fragment() {
                 setBackgroundColor(Color.rgb(7, 18, 32))
                 setPadding((18 * dp).toInt(), (12 * dp).toInt(), (18 * dp).toInt(), (12 * dp).toInt())
 
+                addView(ImageView(context).apply {
+                    setImageResource(R.drawable.quadtv_logo_horizontal)
+                    contentDescription = "QuadTV by QuadMedia"
+                    adjustViewBounds = true
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    layoutParams = LinearLayout.LayoutParams(0, (64 * dp).toInt(), 1f)
+                })
+
                 addView(TextView(context).apply {
-                    text = "QuadMedia Request"
-                    textSize = 22f
+                    text = "Request"
+                    textSize = 20f
                     setTypeface(null, Typeface.BOLD)
                     setTextColor(Color.WHITE)
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 })
 
                 addView(TextView(context).apply {

@@ -27,8 +27,27 @@ def test_home_quick_access_includes_all_five_required_destinations():
     assert '"Live TV"' in home
     assert 'QuadTvRoute.VOD' in home
     assert 'QuadTvRoute.JELLYFIN' in home
+    assert 'QuadTvRoute.FAVORITES' in home
+    assert 'QuadTvRoute.RECENTLY_VIEWED' in home
     assert 'Recently Watched Movies' in home
     assert 'Recently Watched Movies' in home
+
+
+def test_home_left_rail_uses_generated_quick_access_icons():
+    home = read_android("home/HomeFragment.kt")
+    assert "private fun quickAccessIconFor" in home
+    assert "setImageResource(quickAccessIconFor(action))" in home
+    for icon in [
+        "quick_access_icon_live_tv",
+        "quick_access_icon_vod",
+        "quick_access_icon_jellyfin",
+        "quick_access_icon_search",
+        "quick_access_icon_refresh",
+        "quick_access_icon_favorites",
+        "quick_access_icon_recently_viewed",
+        "quick_access_icon_settings",
+    ]:
+        assert f"R.drawable.{icon}" in home
 
 
 # ---------------------------------------------------------------------------

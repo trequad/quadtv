@@ -62,8 +62,17 @@
             </div>
             <div class="inline-form">
               <input id="user-app-username" placeholder="App username (optional)" autocomplete="off" />
-              <input id="user-app-password" type="password" placeholder="App password (optional)" autocomplete="new-password" />
+              <input id="user-app-pin" type="password" inputmode="numeric" placeholder="QuadTV PIN (optional)" autocomplete="new-password" />
+              <input id="user-app-password" type="password" placeholder="Legacy app password (optional)" autocomplete="new-password" />
             </div>
+            <label>Access package
+              <select id="user-access-package">
+                <option value="full_access">Full Access: Live TV + VOD + QuadOnDemand + Seerr</option>
+                <option value="live_tv_only">Live TV Only</option>
+                <option value="live_tv_vod">Live TV + VOD</option>
+                <option value="live_tv_quaddemand">Live TV + QuadOnDemand</option>
+              </select>
+            </label>
             <button type="submit">Add user</button>
           </form>
           <div id="users-list" class="list"></div>
@@ -130,9 +139,15 @@
         <article id="provider-sync-panel" class="card">
           <p class="eyebrow">Provider credentials</p>
           <h2>Manual provider import</h2>
-          <p>Link the Live TV generated customer username/password to a local QuadTV user. The same credential pair must already exist on both Live TV and VOD.</p>
+          <p>Manually link each customer's Live TV and VOD provider accounts separately. App access is controlled by the user's QuadTV package below, not by whether provider credentials are linked.</p>
           <form id="provider-sync-form" class="stack">
             <label>QuadTV user<select id="provider-sync-user-select" required></select></label>
+            <label>Provider type
+              <select id="provider-sync-type" required>
+                <option value="live_tv">Live TV account</option>
+                <option value="vod">VOD account</option>
+              </select>
+            </label>
             <label>Provider username<input id="provider-sync-username" autocomplete="off" required /></label>
             <label>Provider numeric password<input id="provider-sync-password" type="password" autocomplete="new-password" required /></label>
             <button type="submit">Link provider credentials</button>

@@ -44,6 +44,8 @@ def get_live_tv_provider_feed(
     subscription = _status_for_user(user)
     if subscription.expired:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription expired")
+    if not user.can_access_live_tv:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Please subscribe for access")
 
     account = (
         db.query(ProviderAccountModel)

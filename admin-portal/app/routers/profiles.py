@@ -24,6 +24,7 @@ def _profile_to_schema(profile: ProfileModel) -> Profile:
     return Profile(
         id=profile.id,
         device_id=profile.device_id,
+        user_id=profile.user_id,
         display_name=profile.display_name,
         avatar=profile.avatar,
         parental_enabled=profile.parental_enabled,
@@ -44,12 +45,34 @@ def _get_device_or_404(device_id: int, db: Session) -> DeviceModel:
     return device
 
 
-@router.get("/devices/{device_id}/profiles")
-def list_device_profiles(device_id: int, db: Session = Depends(get_db)):
-    _get_device_or_404(device_id, db)
+def _profile_owner_filter(device: DeviceModel):
+    if device.user_id is not None:
+        return ProfileModel.user_id == device.user_id
+    return ProfileModel.device_id == device.id
+
+
+def _migrate_device_profiles_to_user(device: DeviceModel, db: Session) -> None:
+    if device.user_id is None:
+        return
     profiles = (
         db.query(ProfileModel)
-        .filter(ProfileModel.device_id == device_id)
+        .filter(ProfileModel.device_id == device.id, ProfileModel.user_id.is_(None))
+        .all()
+    )
+    for profile in profiles:
+        profile.user_id = device.user_id
+        db.add(profile)
+    if profiles:
+        db.commit()
+
+
+@router.get("/devices/{device_id}/profiles")
+def list_device_profiles(device_id: int, db: Session = Depends(get_db)):
+    device = _get_device_or_404(device_id, db)
+    _migrate_device_profiles_to_user(device, db)
+    profiles = (
+        db.query(ProfileModel)
+        .filter(_profile_owner_filter(device))
         .order_by(ProfileModel.created_at.asc())
         .all()
     )
@@ -62,14 +85,16 @@ def create_device_profile(
     request: ProfileCreate,
     db: Session = Depends(get_db),
 ):
-    _get_device_or_404(device_id, db)
+    device = _get_device_or_404(device_id, db)
+    _migrate_device_profiles_to_user(device, db)
     config = _get_or_create_config(db)
-    profile_count = db.query(ProfileModel).filter(ProfileModel.device_id == device_id).count()
+    profile_count = db.query(ProfileModel).filter(_profile_owner_filter(device)).count()
     if profile_count >= config.max_profiles_per_device:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Profile limit reached for device")
 
     profile = ProfileModel(
         device_id=device_id,
+        user_id=device.user_id,
         display_name=request.display_name,
         avatar=request.avatar,
         parental_pin_hash=_hash_pin(request.parental_pin),

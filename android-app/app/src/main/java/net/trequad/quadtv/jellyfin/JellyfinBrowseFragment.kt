@@ -25,9 +25,14 @@ import kotlinx.coroutines.withContext
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.adminapi.AdminConfigRepository
 import net.trequad.quadtv.core.cache.LaunchConfigCache
+import net.trequad.quadtv.core.cache.ProfileSelectionCache
 import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.favorites.BookmarkedMediaSource
 import net.trequad.quadtv.favorites.MediaBookmarkStore
+import net.trequad.quadtv.parental.GlobalParentalBlocklist
+import net.trequad.quadtv.parental.ParentalFilter
+import net.trequad.quadtv.parental.ParentalSettingsCache
+import net.trequad.quadtv.parental.ProfileParentalState
 
 class JellyfinBrowseFragment : Fragment() {
     private val jellyfinRepository: JellyfinRepository by lazy { buildJellyfinRepository() }
@@ -55,7 +60,7 @@ class JellyfinBrowseFragment : Fragment() {
         savedInstanceState: Bundle?
     ) = LinearLayout(requireContext()).apply {
         orientation = LinearLayout.HORIZONTAL
-        setBackgroundColor(Color.rgb(7, 24, 39))
+        setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
         val dp = context.resources.displayMetrics.density
         val navWidth = (NAV_PANE_WIDTH_DP * dp).toInt()
 
@@ -246,7 +251,8 @@ class JellyfinBrowseFragment : Fragment() {
                 return@launch
             }
             if (startIndex == 0) currentItems.clear()
-            currentItems.addAll(page.items)
+            val visibleItems = ParentalFilter(GlobalParentalBlocklist.defaults()).filterJellyfinItems(profileParentalState(), page.items)
+            currentItems.addAll(visibleItems)
             currentTotalCount = page.totalCount
             currentHasMore = page.hasMore
             isLoadingPage = false
@@ -259,6 +265,17 @@ class JellyfinBrowseFragment : Fragment() {
                 else -> "Showing ${currentItems.size} of ${page.totalCount}."
             }
         }
+    }
+
+    private fun profileParentalState(): ProfileParentalState {
+        val context = requireContext().applicationContext
+        val profileId = ProfileSelectionCache(
+            context.getSharedPreferences(ProfileSelectionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        ).loadProfileId() ?: 0
+        val enabled = ParentalSettingsCache(
+            context.getSharedPreferences(ParentalSettingsCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
+        ).isEnabledForProfile(profileId)
+        return ProfileParentalState(profileId = profileId, parentalEnabled = enabled)
     }
 
     private fun refreshSectionHighlights() {

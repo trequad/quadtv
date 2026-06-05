@@ -65,6 +65,16 @@ function escapeHtml(value) {
   }[char]));
 }
 
+function packageLabel(value) {
+  const labels = {
+    live_tv_only: 'Live TV Only',
+    live_tv_vod: 'Live TV + VOD',
+    live_tv_quaddemand: 'Live TV + QuadOnDemand',
+    full_access: 'Full Access',
+  };
+  return labels[value] || value || 'Full Access';
+}
+
 function userStatus(user) {
   const days = daysUntil(user.expires_on);
   if (!user.active) return { label: 'Inactive', cls: 'danger' };
@@ -95,7 +105,7 @@ function renderUsers() {
           <div class="item-head">
             <div>
               <div class="item-title">${escapeHtml(user.display_name)}</div>
-              <div class="item-meta">${escapeHtml(user.email || 'No email')} · User #${user.id} · ${user.app_username ? `Login: ${escapeHtml(user.app_username)}` : 'No app login'}</div>
+              <div class="item-meta">${escapeHtml(user.email || 'No email')} · User #${user.id} · ${user.app_username ? `Login: ${escapeHtml(user.app_username)}` : 'No app login'} · Package: ${escapeHtml(packageLabel(user.access_package))}</div>
             </div>
             <span class="pill ${status.cls}">${escapeHtml(status.label)}</span>
           </div>
@@ -108,10 +118,22 @@ function renderUsers() {
             </select>
             <button type="submit">Save</button>
           </form>
+          <div class="item-section-label">Access package</div>
+          <form class="item-actions" data-user-access="${user.id}">
+            <select name="access_package">
+              <option value="full_access" ${user.access_package === 'full_access' ? 'selected' : ''}>Full Access</option>
+              <option value="live_tv_only" ${user.access_package === 'live_tv_only' ? 'selected' : ''}>Live TV Only</option>
+              <option value="live_tv_vod" ${user.access_package === 'live_tv_vod' ? 'selected' : ''}>Live TV + VOD</option>
+              <option value="live_tv_quaddemand" ${user.access_package === 'live_tv_quaddemand' ? 'selected' : ''}>Live TV + QuadOnDemand</option>
+            </select>
+            <button type="submit">Save</button>
+          </form>
+          <div class="item-meta">Live: ${user.can_access_live_tv ? 'yes' : 'no'} · VOD: ${user.can_access_vod ? 'yes' : 'no'} · QuadOnDemand: ${user.can_access_quaddemand ? 'yes' : 'no'} · Seerr: ${user.can_access_seerr ? 'yes' : 'no'}</div>
           <div class="item-section-label">App login credentials</div>
           <form class="item-actions" data-user-credentials="${user.id}">
             <input type="text" name="app_username" placeholder="Username" value="${escapeHtml(user.app_username || '')}" autocomplete="off" />
-            <input type="password" name="app_password" placeholder="Password (leave blank to keep current)" autocomplete="new-password" />
+            <input type="password" name="app_pin" placeholder="PIN (leave blank to keep current)" autocomplete="new-password" />
+            <input type="password" name="app_password" placeholder="Legacy password (leave blank to keep current)" autocomplete="new-password" />
             <button type="submit">Save</button>
           </form>
           <div class="item-actions">
@@ -136,6 +158,19 @@ function renderUsers() {
       await refreshAll();
     });
   });
+  document.querySelectorAll('[data-user-access]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = form.dataset.userAccess;
+      const data = new FormData(form);
+      await api(`/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ access_package: data.get('access_package') }),
+      });
+      showToast('Access package updated.');
+      await refreshAll();
+    });
+  });
   document.querySelectorAll('[data-user-credentials]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -144,11 +179,14 @@ function renderUsers() {
       const body = {};
       const username = data.get('app_username').trim();
       const password = data.get('app_password');
+      const pin = data.get('app_pin');
       if (username) body.app_username = username;
       if (password) body.app_password = password;
-      if (!Object.keys(body).length) { showToast('Enter a username or password to update.'); return; }
+      if (pin) body.app_pin = pin;
+      if (!Object.keys(body).length) { showToast('Enter a username, PIN, or password to update.'); return; }
       await api(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify(body) });
       form.querySelector('[name=app_password]').value = '';
+      form.querySelector('[name=app_pin]').value = '';
       showToast('Login credentials updated.');
       await refreshAll();
     });
@@ -350,6 +388,7 @@ function bindEvents() {
   $('create-user-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const appUsername = $('user-app-username').value.trim() || null;
+    const appPin = $('user-app-pin').value || null;
     const appPassword = $('user-app-password').value || null;
     await api('/users', {
       method: 'POST',
@@ -357,7 +396,9 @@ function bindEvents() {
         display_name: $('user-display-name').value,
         email: $('user-email').value || null,
         app_username: appUsername,
+        app_pin: appPin,
         app_password: appPassword,
+        access_package: $('user-access-package').value,
       }),
     });
     event.target.reset();
@@ -380,12 +421,13 @@ function bindEvents() {
     await api(`/provider-sync/users/${userId}/manual-import`, {
       method: 'POST',
       body: JSON.stringify({
+        provider_type: $('provider-sync-type').value,
         provider_username: $('provider-sync-username').value,
         provider_password: $('provider-sync-password').value,
       }),
     });
     $('provider-sync-password').value = '';
-    showToast('Provider credentials linked for Live TV and VOD.');
+    showToast('Provider credentials linked.');
     await refreshAll();
   });
 

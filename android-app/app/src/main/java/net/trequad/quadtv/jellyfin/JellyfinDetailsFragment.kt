@@ -52,7 +52,7 @@ class JellyfinDetailsFragment : Fragment() {
         val item = requireItem()
         mediaStore.recordRecent(item.toMediaBookmark())
         return ScrollView(requireContext()).apply {
-            setBackgroundColor(resources.getColor(R.color.quadtv_charcoal, null))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL

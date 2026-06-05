@@ -70,11 +70,11 @@ class EpgGridFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View = LinearLayout(requireContext()).apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundColor(resources.getColor(R.color.quadtv_navy, null))
+        setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
         val dp = context.resources.displayMetrics.density
 
         addView(TextView(context).apply {
-            text = "QuadTV Guide"
+            text = "Guide"
             textSize = 24f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)

@@ -43,6 +43,7 @@ import net.trequad.quadtv.navigation.QuadTvRoute
 import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.provider.ProviderFeedRefreshCoordinator
 import net.trequad.quadtv.provider.ProviderFeedRepository
+import net.trequad.quadtv.R
 import net.trequad.quadtv.vod.VodDetailsFragment
 import net.trequad.quadtv.vod.VodItem
 import net.trequad.quadtv.vod.VodRepository
@@ -75,6 +76,7 @@ class HomeFragment : Fragment() {
     private val vodRepository: VodRepository by lazy { buildVodRepository() }
     private val jellyfinRepository: JellyfinRepository by lazy { buildJellyfinRepository() }
 
+    private lateinit var menuScrollView: ScrollView
     private lateinit var menuContainer: LinearLayout
     private lateinit var rightContainer: LinearLayout
 
@@ -87,23 +89,32 @@ class HomeFragment : Fragment() {
         val dp = context.resources.displayMetrics.density
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.rgb(7, 24, 39))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 setBackgroundColor(Color.rgb(12, 30, 50))
                 layoutParams = LinearLayout.LayoutParams((240 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
-                addView(TextView(context).apply {
-                    text = QuadTvConfig.APP_NAME + "\n" + QuadTvConfig.PARENT_BRAND
-                    textSize = 18f
-                    setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.rgb(126, 203, 255))
-                    setPadding((18 * dp).toInt(), (22 * dp).toInt(), (18 * dp).toInt(), (18 * dp).toInt())
+                addView(ImageView(context).apply {
+                    setImageResource(R.drawable.quadtv_logo_horizontal)
+                    contentDescription = "QuadTV by QuadMedia"
+                    adjustViewBounds = true
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setPadding((14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt())
                     setBackgroundColor(Color.rgb(7, 18, 32))
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        (88 * dp).toInt()
+                    )
                 })
                 addView(divider(context, horizontal = true))
                 menuContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-                addView(menuContainer)
+                menuScrollView = ScrollView(context).apply {
+                    isFillViewport = false
+                    addView(menuContainer)
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+                }
+                addView(menuScrollView)
             })
 
             addView(divider(context, horizontal = false))
@@ -136,6 +147,8 @@ class HomeFragment : Fragment() {
             HomeAction("QuadOnDemand", QuadTvRoute.JELLYFIN),
             HomeAction("Search", QuadTvRoute.MOVIE_SEARCH),
             HomeAction("Refresh", refreshProviderFeeds = true),
+            HomeAction("Favorites", QuadTvRoute.FAVORITES),
+            HomeAction("Recently Viewed", QuadTvRoute.RECENTLY_VIEWED),
             HomeAction("Seerr", QuadTvRoute.SEERR),
             HomeAction("Settings", QuadTvRoute.SETTINGS)
         ).forEach { action ->
@@ -143,23 +156,51 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun menuButton(action: HomeAction): TextView {
+    private fun menuButton(action: HomeAction): View {
         val dp = requireContext().resources.displayMetrics.density
-        return TextView(requireContext()).apply {
-            text = action.label
-            textSize = 19f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             isFocusable = true
             isFocusableInTouchMode = true
-            setPadding((20 * dp).toInt(), (18 * dp).toInt(), (18 * dp).toInt(), (18 * dp).toInt())
+            setPadding((18 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
             setBackgroundColor(Color.rgb(10, 24, 38))
+            addView(ImageView(context).apply {
+                setImageResource(quickAccessIconFor(action))
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                alpha = 0.95f
+                layoutParams = LinearLayout.LayoutParams((34 * dp).toInt(), (34 * dp).toInt()).apply {
+                    rightMargin = (14 * dp).toInt()
+                }
+            })
+            addView(TextView(context).apply {
+                text = action.label
+                textSize = 18f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
             setOnFocusChangeListener { view, hasFocus ->
                 view.setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+                if (hasFocus && ::menuScrollView.isInitialized) {
+                    menuScrollView.post { menuScrollView.smoothScrollTo(0, view.bottom) }
+                }
             }
             setOnClickListener { handleHomeAction(action) }
         }
+    }
+
+    private fun quickAccessIconFor(action: HomeAction): Int = when (action.label) {
+        "Live TV" -> net.trequad.quadtv.R.drawable.quick_access_icon_live_tv
+        "VOD" -> net.trequad.quadtv.R.drawable.quick_access_icon_vod
+        "QuadOnDemand" -> net.trequad.quadtv.R.drawable.quick_access_icon_jellyfin
+        "Search" -> net.trequad.quadtv.R.drawable.quick_access_icon_search
+        "Refresh" -> net.trequad.quadtv.R.drawable.quick_access_icon_refresh
+        "Favorites" -> net.trequad.quadtv.R.drawable.quick_access_icon_favorites
+        "Recently Viewed" -> net.trequad.quadtv.R.drawable.quick_access_icon_recently_viewed
+        "Settings" -> net.trequad.quadtv.R.drawable.quick_access_icon_settings
+        else -> net.trequad.quadtv.R.drawable.quick_access_icon_jellyfin
     }
 
     private fun handleHomeAction(action: HomeAction) {

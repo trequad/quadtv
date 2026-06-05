@@ -35,6 +35,12 @@ private val PAGES = listOf(
         tip = "Tip: Tap \"Add to Favorites\" on any details page to save it."
     ),
     OnboardingPage(
+        emoji = "📝",
+        title = "Request with Seerr",
+        body = "Use Seerr to request movies and shows that are not in QuadOnDemand yet. Once approved, approved requests appear in QuadOnDemand.",
+        tip = "Tip: Seerr is for requests; QuadOnDemand is where approved movies and shows are watched."
+    ),
+    OnboardingPage(
         emoji = "⭐",
         title = "Your Favorites & History",
         body = "Everything you watch and favorite is saved to your profile. Find it all on the Home screen under Favorites and Recently Viewed.",
@@ -60,7 +66,7 @@ class OnboardingFragment : Fragment() {
         return LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.rgb(7, 24, 39))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
             setPadding(96, 64, 96, 64)
 
             emojiView = TextView(context).apply {

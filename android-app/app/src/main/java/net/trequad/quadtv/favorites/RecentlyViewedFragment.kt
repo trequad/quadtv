@@ -34,7 +34,7 @@ class RecentlyViewedFragment : BrowseSupportFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "QuadTV Recently Viewed"
+        title = "Recently Viewed"
         headersState = HEADERS_ENABLED
         brandColor = resources.getColor(R.color.quadmedia_blue, null)
         adapter = buildRecentRows()
@@ -47,6 +47,11 @@ class RecentlyViewedFragment : BrowseSupportFragment() {
                 else -> Unit
             }
         }
+    }
+
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        view.setBackgroundResource(R.drawable.quadtv_neon_waves_background)
     }
 
     override fun onResume() {

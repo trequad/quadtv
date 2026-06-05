@@ -49,6 +49,25 @@ def _ensure_sqlite_schema(engine) -> None:
                 connection.execute(text("ALTER TABLE users ADD COLUMN jellyfin_user_id VARCHAR(120)"))
             if "jellyfin_username" not in user_columns:
                 connection.execute(text("ALTER TABLE users ADD COLUMN jellyfin_username VARCHAR(120)"))
+            if "app_pin_hash" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN app_pin_hash VARCHAR(255)"))
+            if "access_package" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN access_package VARCHAR(40) NOT NULL DEFAULT 'full_access'"))
+            if "can_access_live_tv" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN can_access_live_tv BOOLEAN NOT NULL DEFAULT 1"))
+            if "can_access_vod" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN can_access_vod BOOLEAN NOT NULL DEFAULT 1"))
+            if "can_access_quaddemand" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN can_access_quaddemand BOOLEAN NOT NULL DEFAULT 1"))
+            if "can_access_seerr" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN can_access_seerr BOOLEAN NOT NULL DEFAULT 1"))
+
+    if "profiles" in inspector.get_table_names():
+        profile_columns = {column["name"] for column in inspector.get_columns("profiles")}
+        if "user_id" not in profile_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE profiles ADD COLUMN user_id INTEGER"))
+                connection.execute(text("UPDATE profiles SET user_id = (SELECT user_id FROM devices WHERE devices.id = profiles.device_id) WHERE user_id IS NULL"))
 
 
 def get_db() -> Generator[Session, None, None]:

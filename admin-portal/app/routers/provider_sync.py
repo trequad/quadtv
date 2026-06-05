@@ -29,7 +29,7 @@ def _serialize(accounts: list[ProviderAccountModel], user_id: int, provider_user
             results.append(
                 ProviderAccountStatus(
                     provider_type=provider_type,
-                    provider_username=provider_username,
+                    provider_username="",
                     sync_status="not_synced",
                     last_error=None,
                 )
@@ -75,8 +75,11 @@ def manual_import_provider_credentials(
     password_hash = hash_provider_password(request.provider_password)
     password_secret = encrypt_provider_secret(request.provider_password)
     now = datetime.now(timezone.utc)
+    selected_provider_types = [request.provider_type] if request.provider_type else list(PROVIDER_TYPES)
+    if any(provider_type not in PROVIDER_TYPES for provider_type in selected_provider_types):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported provider type")
     accounts = []
-    for provider_type in PROVIDER_TYPES:
+    for provider_type in selected_provider_types:
         account = (
             db.query(ProviderAccountModel)
             .filter(
@@ -109,6 +112,5 @@ def manual_import_provider_credentials(
         accounts.append(account)
 
     db.commit()
-    for account in accounts:
-        db.refresh(account)
-    return _serialize(accounts, user_id=user_id, provider_username=provider_username)
+    all_accounts = db.query(ProviderAccountModel).filter(ProviderAccountModel.user_id == user_id).all()
+    return _serialize(all_accounts, user_id=user_id, provider_username=provider_username)

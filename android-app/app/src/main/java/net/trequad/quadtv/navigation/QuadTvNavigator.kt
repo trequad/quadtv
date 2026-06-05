@@ -7,6 +7,7 @@ enum class QuadTvRoute {
     LOGIN,
     REGISTER,
     EXPIRED,
+    SUBSCRIPTION_REQUIRED,
     HOME,
     PROFILES,
     LIVE_TV,

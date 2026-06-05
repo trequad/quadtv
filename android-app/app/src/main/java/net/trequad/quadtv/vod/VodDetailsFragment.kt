@@ -55,7 +55,7 @@ class VodDetailsFragment : Fragment() {
         val item = requireItem()
         mediaStore.recordRecent(item.toMediaBookmark())
         return ScrollView(requireContext()).apply {
-            setBackgroundColor(resources.getColor(R.color.quadtv_charcoal, null))
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -76,7 +76,7 @@ class VodDetailsFragment : Fragment() {
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
 
                     addView(TextView(context).apply {
-                        text = "QuadTV Details"
+                        text = "Details"
                         textSize = 18f
                         setTextColor(Color.LTGRAY)
                         setPadding(0, 0, 0, 10)

@@ -36,7 +36,7 @@ def test_main_activity_maps_routes_to_feature_fragments():
     assert "QuadTvRoute.JELLYFIN -> JellyfinBrowseFragment()" in source
     assert "QuadTvRoute.SEERR -> SeerrFragment()" in source
     assert "SettingsFragment()" in source
-    assert "addToBackStack(route.name)" in source
+    assert "addToBackStack(guardedRoute.name)" in source
     assert "supportFragmentManager.popBackStack()" in source
 
 
@@ -65,7 +65,8 @@ def test_seerr_fragment_embeds_request_portal_webview():
     assert "javaScriptEnabled = true" in source
     assert "domStorageEnabled = true" in source
     assert "QuadTvConfig.SEERR_BASE_URL" in source
-    assert "QuadMedia Request" in source
+    assert "R.drawable.quadtv_logo_horizontal" in source
+    assert "Request" in source
     assert "goBack()" in source
     assert "const val SEERR_BASE_URL = \"http://10.34.1.194:5055\"" in config
 
