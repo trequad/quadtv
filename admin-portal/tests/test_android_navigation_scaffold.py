@@ -14,7 +14,7 @@ def test_navigation_contract_lists_major_tv_destinations():
     source = read_android("navigation/QuadTvNavigator.kt")
 
     assert "enum class QuadTvRoute" in source
-    for route in ["LOGIN", "HOME", "PROFILES", "LIVE_TV", "EPG", "MOVIE_SEARCH", "VOD", "JELLYFIN", "SETTINGS"]:
+    for route in ["LOGIN", "HOME", "PROFILES", "LIVE_TV", "EPG", "MOVIE_SEARCH", "VOD", "JELLYFIN", "SEERR", "SETTINGS"]:
         assert route in source
     assert "interface QuadTvNavigator" in source
     assert "fun navigateTo(route: QuadTvRoute)" in source
@@ -34,6 +34,7 @@ def test_main_activity_maps_routes_to_feature_fragments():
     assert "QuadTvRoute.MOVIE_SEARCH -> MovieSearchFragment()" in source
     assert "QuadTvRoute.VOD -> VodBrowseFragment()" in source
     assert "QuadTvRoute.JELLYFIN -> JellyfinBrowseFragment()" in source
+    assert "QuadTvRoute.SEERR -> SeerrFragment()" in source
     assert "SettingsFragment()" in source
     assert "addToBackStack(route.name)" in source
     assert "supportFragmentManager.popBackStack()" in source
@@ -45,13 +46,28 @@ def test_home_fragment_renders_action_cards_and_invokes_navigator():
     assert "data class HomeAction" in source
     assert "QuadTvRoute" in source
     assert "QuadTvNavigator" in source
-    assert "setOnItemViewClickedListener" in source
-    assert "navigateTo(route)" in source
-    for label in ["Live TV", "Guide", "Movie Search", "Refresh Playlist & Guide", "Settings"]:
+    assert "setOnClickListener" in source
+    assert "navigateTo(action.route)" in source
+    for label in ["Live TV", "VOD", "QuadOnDemand", "Search", "Refresh", "Seerr", "Settings"]:
         assert label in source
-    for route in ["QuadTvRoute.LIVE_TV", "QuadTvRoute.EPG", "QuadTvRoute.MOVIE_SEARCH", "QuadTvRoute.SETTINGS"]:
+    for route in ["QuadTvRoute.LIVE_TV", "QuadTvRoute.VOD", "QuadTvRoute.JELLYFIN", "QuadTvRoute.MOVIE_SEARCH", "QuadTvRoute.SEERR", "QuadTvRoute.SETTINGS"]:
         assert route in source
-    assert "Recently Added VOD" not in source
+    assert "Recently Added VOD" in source
+
+
+def test_seerr_fragment_embeds_request_portal_webview():
+    source = read_android("seerr/SeerrFragment.kt")
+    config = read_android("core/config/QuadTvConfig.kt")
+
+    assert "class SeerrFragment : Fragment()" in source
+    assert "WebView" in source
+    assert "WebViewClient" in source
+    assert "javaScriptEnabled = true" in source
+    assert "domStorageEnabled = true" in source
+    assert "QuadTvConfig.SEERR_BASE_URL" in source
+    assert "QuadMedia Request" in source
+    assert "goBack()" in source
+    assert "const val SEERR_BASE_URL = \"http://10.34.1.194:5055\"" in config
 
 
 def test_live_tv_fragment_exists_as_navigation_target():

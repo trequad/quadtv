@@ -163,24 +163,45 @@ class VodDetailsFragment : Fragment() {
                 return@launch
             }
             seasons.forEach { season ->
-                container.addView(TextView(requireContext()).apply {
-                    text = "Season ${season.seasonNumber}"
+                container.addView(Button(requireContext()).apply {
+                    text = seasonLabel(season)
                     textSize = 22f
-                    setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                    setPadding(0, 12, 0, 8)
+                    isFocusable = true
+                    setOnClickListener { showEpisodesOverlay(season) }
                 })
-                season.episodes.forEach { episode ->
-                    container.addView(Button(requireContext()).apply {
-                        text = "Episode ${episode.episodeNumber}: ${episode.title}"
-                        textSize = 18f
-                        isFocusable = true
-                        isEnabled = episode.streamUrl != null
-                        setOnClickListener { playEpisode(episode) }
-                    })
-                }
             }
         }
+    }
+
+    private fun seasonLabel(season: VodSeason): String = "Season ${season.seasonNumber}"
+
+    private fun showEpisodesOverlay(season: VodSeason) {
+        val episodeList = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 16, 24, 16)
+        }
+        val episodes = season.episodes
+        if (episodes.isEmpty()) {
+            episodeList.addView(TextView(requireContext()).apply {
+                text = "No episodes found for ${seasonLabel(season)}."
+                textSize = 18f
+                setTextColor(Color.LTGRAY)
+            })
+        }
+        episodes.forEach { episode ->
+            episodeList.addView(Button(requireContext()).apply {
+                text = "Episode ${episode.episodeNumber}: ${episode.title}"
+                textSize = 18f
+                isFocusable = true
+                isEnabled = episode.streamUrl != null
+                setOnClickListener { playEpisode(episode) }
+            })
+        }
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(seasonLabel(season))
+            .setView(ScrollView(requireContext()).apply { addView(episodeList) })
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun playEpisode(episode: VodEpisode): Boolean {

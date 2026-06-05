@@ -2,11 +2,11 @@ package net.trequad.quadtv.live
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -47,6 +47,8 @@ class LiveTvFragment : Fragment() {
     private val epgRepository: EpgRepository by lazy { buildEpgRepository() }
     private lateinit var groupContainer: LinearLayout
     private lateinit var channelContainer: LinearLayout
+    private lateinit var contentHeader: TextView
+    private lateinit var statusText: TextView
     private var channelsByGroup: Map<String, List<LiveChannel>> = emptyMap()
     private var currentProgrammes: Map<String, EpgProgramme> = emptyMap()
     private var selectedGroup: String? = null
@@ -57,47 +59,72 @@ class LiveTvFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         return LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(resources.getColor(R.color.quadtv_charcoal, null))
-            setPadding(48, 40, 48, 40)
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(Color.rgb(7, 24, 39))
+            val dp = context.resources.displayMetrics.density
+            val navWidth = (220 * dp).toInt()
 
             addView(LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(Color.rgb(12, 30, 50))
+                layoutParams = LinearLayout.LayoutParams(navWidth, LinearLayout.LayoutParams.MATCH_PARENT)
                 addView(TextView(context).apply {
                     text = "Live TV"
-                    textSize = 34f
-                    setTextColor(Color.WHITE)
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                })
-                addView(Button(context).apply {
-                    text = "Open Guide"
                     textSize = 20f
-                    isFocusable = true
-                    setOnClickListener { (activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.EPG) }
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.rgb(66, 165, 245))
+                    setPadding((16 * dp).toInt(), (20 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt())
+                    setBackgroundColor(Color.rgb(7, 18, 32))
+                })
+                addView(divider(context, horizontal = true))
+                groupContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+                addView(ScrollView(context).apply {
+                    addView(groupContainer)
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
                 })
             })
 
+            addView(divider(context, horizontal = false))
+
             addView(LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, 28, 0, 0)
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
 
-                groupContainer = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(0, 0, 28, 0)
-                }
-                addView(ScrollView(context).apply {
-                    addView(groupContainer)
-                    layoutParams = LinearLayout.LayoutParams(360, ViewGroup.LayoutParams.MATCH_PARENT)
+                addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding((20 * dp).toInt(), (16 * dp).toInt(), (20 * dp).toInt(), (8 * dp).toInt())
+                    setBackgroundColor(Color.rgb(7, 18, 32))
+                    contentHeader = TextView(context).apply {
+                        text = ALL_CHANNELS_GROUP
+                        textSize = 22f
+                        setTypeface(null, Typeface.BOLD)
+                        setTextColor(Color.WHITE)
+                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    }
+                    addView(contentHeader)
+                    addView(TextView(context).apply {
+                        text = "Open Guide"
+                        textSize = 16f
+                        setTextColor(Color.rgb(66, 165, 245))
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), 0)
+                        setOnClickListener { (activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.EPG) }
+                    })
                 })
-
-                channelContainer = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
+                addView(divider(context, horizontal = true))
+                statusText = TextView(context).apply {
+                    textSize = 15f
+                    setTextColor(Color.LTGRAY)
+                    setPadding((20 * dp).toInt(), (10 * dp).toInt(), (20 * dp).toInt(), (8 * dp).toInt())
                 }
+                addView(statusText)
+
+                channelContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
                 addView(ScrollView(context).apply {
                     addView(channelContainer)
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
                 })
             })
         }.also {
@@ -122,8 +149,10 @@ class LiveTvFragment : Fragment() {
             }
             try {
                 val grouped = channels.groupBy { it.groupTitle?.takeIf { g -> g.isNotBlank() } ?: "Other Channels" }
-                channelsByGroup = sortedGroupNames(grouped.keys).associateWith { group -> grouped[group].orEmpty() }
-                selectedGroup = channelsByGroup.keys.first()
+                val favoriteChannels = favoriteChannelsFor(channels)
+                channelsByGroup = linkedMapOf(FAVORITES_GROUP to favoriteChannels, ALL_CHANNELS_GROUP to channels) +
+                    sortedGroupNames(grouped.keys).associateWith { group -> grouped[group].orEmpty() }
+                selectedGroup = FAVORITES_GROUP
                 renderGroupsAndChannels(selectedGroup ?: channelsByGroup.keys.first())
                 loadCurrentProgrammesIntoRows(channels, epgRepo)
             } catch (_: Throwable) {
@@ -146,49 +175,73 @@ class LiveTvFragment : Fragment() {
 
     private fun renderGroupsAndChannels(selectedGroupName: String) {
         selectedGroup = selectedGroupName
+        contentHeader.text = selectedGroupName
         groupContainer.removeAllViews()
         channelContainer.removeAllViews()
+        groupContainer.addView(sectionLabel("Categories"))
         channelsByGroup.keys.forEach { group ->
             groupContainer.addView(sideButton(group, selected = group == selectedGroupName) {
                 renderGroupsAndChannels(group)
             })
         }
         val selectedLineup = channelsByGroup[selectedGroupName].orEmpty().sortedBy { it.name.lowercase() }
-        selectedLineup.forEach { channel ->
-            channelContainer.addView(channelButton(channel, selectedLineup))
+        statusText.text = "${selectedLineup.size} channels — choose a category on the left."
+        if (selectedLineup.isEmpty()) {
+            channelContainer.addView(messageView("No favorite channels yet. Long-press a channel to add it here."))
+        } else {
+            selectedLineup.forEach { channel ->
+                channelContainer.addView(channelButton(channel, selectedLineup))
+            }
+        }
+    }
+
+    private fun favoriteChannelsFor(channels: List<LiveChannel>): List<LiveChannel> {
+        val channelsById = channels.associateBy { it.id }
+        return bookmarkStore.favoriteChannels().mapNotNull { favorite ->
+            channelsById[favorite.id] ?: LiveChannel(
+                id = favorite.id,
+                name = favorite.name,
+                streamUrl = favorite.streamUrl,
+                logoUrl = favorite.logoUrl,
+                groupTitle = favorite.groupTitle
+            )
         }
     }
 
     private fun showLoadingState() {
         groupContainer.removeAllViews()
         channelContainer.removeAllViews()
-        groupContainer.addView(messageView("Groups"))
+        groupContainer.addView(sectionLabel("Categories"))
         channelContainer.addView(messageView("Loading your channels…"))
+        statusText.text = "Loading Live TV…"
     }
 
     private fun showErrorState() {
         groupContainer.removeAllViews()
         channelContainer.removeAllViews()
+        groupContainer.addView(sectionLabel("Categories"))
         groupContainer.addView(sideButton("Open Guide", selected = false) {
             (activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.EPG)
         })
         channelContainer.addView(messageView("Can't load channels right now.\nCheck your Wi-Fi and try again, or pull down to refresh."))
+        statusText.text = "Live TV unavailable"
     }
 
-    private fun sideButton(label: String, selected: Boolean, onClick: () -> Unit): Button {
-        return Button(requireContext()).apply {
+    private fun sideButton(label: String, selected: Boolean, onClick: () -> Unit): TextView {
+        val dp = requireContext().resources.displayMetrics.density
+        return TextView(requireContext()).apply {
             text = label
-            textSize = 19f
+            textSize = 16f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             isFocusable = true
+            isFocusableInTouchMode = true
             setTextColor(Color.WHITE)
-            setBackgroundColor(if (selected) Color.rgb(44, 95, 124) else Color.rgb(24, 52, 76))
-            setPadding(20, 14, 20, 14)
+            setBackgroundColor(if (selected) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+            setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
             setOnFocusChangeListener { _, hasFocus ->
                 setBackgroundColor(
-                    if (hasFocus || selected) Color.rgb(66, 165, 245) else Color.rgb(24, 52, 76)
+                    if (hasFocus || selected) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38)
                 )
-                textSize = if (hasFocus) 21f else 19f
             }
             setOnClickListener { onClick() }
         }
@@ -271,6 +324,25 @@ class LiveTvFragment : Fragment() {
         setPadding(24, 18, 24, 18)
     }
 
+    private fun sectionLabel(label: String): TextView = TextView(requireContext()).apply {
+        text = label
+        textSize = 13f
+        setTypeface(null, Typeface.BOLD)
+        setTextColor(Color.rgb(126, 203, 255))
+        setPadding(16, 16, 16, 8)
+    }
+
+    private fun divider(context: Context, horizontal: Boolean): View {
+        return View(context).apply {
+            setBackgroundColor(Color.rgb(25, 52, 72))
+            layoutParams = if (horizontal) {
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+            } else {
+                LinearLayout.LayoutParams(1, LinearLayout.LayoutParams.MATCH_PARENT)
+            }
+        }
+    }
+
     private fun buildLiveTvRepository(): LiveTvRepository {
         val context = requireContext().applicationContext
         val okHttpClient = NetworkModule.provideOkHttpClient()
@@ -300,3 +372,6 @@ private fun isAdultGroupTitle(group: String): Boolean {
     val lower = group.lowercase()
     return listOf("xxx", "adult", "18+", "mature", "porn").any { lower.contains(it) }
 }
+
+private const val ALL_CHANNELS_GROUP = "All Channels"
+private const val FAVORITES_GROUP = "Favorites"

@@ -60,7 +60,7 @@ class FavoritesFragment : BrowseSupportFragment() {
         return ArrayObjectAdapter(ListRowPresenter()).apply {
             addFavoriteLiveRow(rowId = 0)
             addFavoriteMediaRow(rowId = 1, title = "Favorite VOD", source = BookmarkedMediaSource.VOD)
-            addFavoriteMediaRow(rowId = 2, title = "Favorite Jellyfin", source = BookmarkedMediaSource.JELLYFIN)
+            addFavoriteMediaRow(rowId = 2, title = "Favorite QuadOnDemand", source = BookmarkedMediaSource.JELLYFIN)
         }
     }
 

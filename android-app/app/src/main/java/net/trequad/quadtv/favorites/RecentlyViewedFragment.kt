@@ -58,7 +58,7 @@ class RecentlyViewedFragment : BrowseSupportFragment() {
         return ArrayObjectAdapter(ListRowPresenter()).apply {
             addRecentLiveRow(rowId = 0)
             addRecentMediaRow(rowId = 1, title = "Recently Viewed VOD", source = BookmarkedMediaSource.VOD)
-            addRecentMediaRow(rowId = 2, title = "Recently Viewed Jellyfin", source = BookmarkedMediaSource.JELLYFIN)
+            addRecentMediaRow(rowId = 2, title = "Recently Viewed QuadOnDemand", source = BookmarkedMediaSource.JELLYFIN)
         }
     }
 

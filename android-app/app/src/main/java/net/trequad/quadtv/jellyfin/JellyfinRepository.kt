@@ -31,7 +31,34 @@ class JellyfinRepository(
     suspend fun loadMoviesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
         val context = loadContext() ?: return emptyPage(startIndex, limit)
         val request = authorizedRequest(
-            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&SortBy=SortName&SortOrder=Ascending&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
+            context.apiKey
+        )
+        return executeItemsPage(request, context.baseUrl, startIndex, limit)
+    }
+
+    suspend fun countMoviesBeforeLetter(letter: Char): Int {
+        val context = loadContext() ?: return 0
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&SortBy=SortName&SortOrder=Ascending&NameLessThan=$letter&Limit=0",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.totalRecordCount ?: 0
+    }
+
+    suspend fun countSeriesBeforeLetter(letter: Char): Int {
+        val context = loadContext() ?: return 0
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&SortBy=SortName&SortOrder=Ascending&NameLessThan=$letter&Limit=0",
+            context.apiKey
+        )
+        return executeItemsRequest(request)?.totalRecordCount ?: 0
+    }
+
+    suspend fun loadRecentlyReleasedMoviesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
+        val context = loadContext() ?: return emptyPage(startIndex, limit)
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio,PremiereDate&SortBy=PremiereDate&SortOrder=Descending&StartIndex=$startIndex&Limit=$limit",
             context.apiKey
         )
         return executeItemsPage(request, context.baseUrl, startIndex, limit)
@@ -42,7 +69,16 @@ class JellyfinRepository(
     suspend fun loadSeriesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
         val context = loadContext() ?: return emptyPage(startIndex, limit)
         val request = authorizedRequest(
-            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&SortBy=SortName&SortOrder=Ascending&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
+            context.apiKey
+        )
+        return executeItemsPage(request, context.baseUrl, startIndex, limit)
+    }
+
+    suspend fun loadRecentlyReleasedSeriesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
+        val context = loadContext() ?: return emptyPage(startIndex, limit)
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio,PremiereDate&SortBy=PremiereDate&SortOrder=Descending&StartIndex=$startIndex&Limit=$limit",
             context.apiKey
         )
         return executeItemsPage(request, context.baseUrl, startIndex, limit)
@@ -88,15 +124,25 @@ class JellyfinRepository(
     }
 
     suspend fun buildEpisodeStream(episode: JellyfinEpisode): JellyfinStream? {
-        return buildHlsStream(episode.id)
+        return buildHlsStream(episode.id, episode.title)
     }
 
-    suspend fun buildHlsStream(itemId: String): JellyfinStream? {
+    suspend fun buildHlsStream(itemId: String, title: String): JellyfinStream? {
         val context = loadContext() ?: return null
-        val request = authorizedRequest("${context.baseUrl}/Items/$itemId", context.apiKey)
-        val item = executeItemRequest(request) ?: return null
-        val streamUrl = "${context.baseUrl}/Videos/$itemId/stream?static=true&api_key=${context.apiKey}"
-        return JellyfinStream(itemId = itemId, title = item.name, hlsUrl = streamUrl)
+        // MPEG-TS progressive stream: VLC handles TS containers best for HTTP streaming.
+        // Direct-copy H.264 video, transcode audio to AAC for universal compatibility.
+        // MaxWidth/Height tells Jellyfin the device can handle up to 720p — prevents the
+        // default 416px mobile profile from kicking in for unknown clients.
+        val streamUrl = "${context.baseUrl}/Videos/$itemId/stream.ts" +
+            "?DeviceId=quadtv-app" +
+            "&VideoCodec=h264" +
+            "&AudioCodec=aac" +
+            "&AllowVideoStreamCopy=true" +
+            "&AllowAudioStreamCopy=false" +
+            "&MaxWidth=1280" +
+            "&MaxHeight=720" +
+            "&api_key=${context.apiKey}"
+        return JellyfinStream(itemId = itemId, title = title, hlsUrl = streamUrl)
     }
 
     private suspend fun loadContext(): JellyfinContext? {

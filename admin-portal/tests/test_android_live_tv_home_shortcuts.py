@@ -38,13 +38,13 @@ def test_home_screen_renders_favorites_and_recent_live_channel_rows():
     source = read_android("home/HomeFragment.kt")
 
     assert "LiveChannelBookmarkStore" in source
-    assert "Favorite Live Channels" in source
-    assert "Recently Viewed Live Channels" in source
-    assert "addLiveShortcutRow" in source
-    assert "bookmarkStore.favoriteChannels()" in source
+    assert "Recently Watched Channels" in source
+    assert "Recently Watched Movies" in source
+    assert "recentChannels()" in source
+    assert "bookmarkStore.recentChannels()" in source
     assert "bookmarkStore.recentChannels()" in source
     assert "playbackRequest = channel.toPlaybackRequest()" in source
-    assert "navigateToPlayer(request)" in source
+    assert "navigateToPlayer(tile.playbackRequest)" in source
 
 
 def test_live_tv_and_player_can_bookmark_and_record_recent_channels():

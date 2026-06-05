@@ -6,6 +6,9 @@ object QuadTvConfig {
 
     // Operator-controlled provider defaults. The portal may override these at launch.
     const val ADMIN_PORTAL_BASE_URL = "https://example.invalid/"
+    const val SEERR_BASE_URL = "http://10.34.1.194:5055"
+    const val SEERR_ADMIN_EMAIL = "jpitmon34@gmail.com"
+    const val SEERR_ADMIN_PASSWORD = "REDACTED_PASSWORD"
     const val OPERATOR_LIVE_TV_PROVIDER_BASE_URL = "http://by.questreams.com:83"
     const val OPERATOR_VOD_PROVIDER_BASE_URL = "https://livinitup.online"
     const val PROVIDER_FEED_REFRESH_HOURS = 24

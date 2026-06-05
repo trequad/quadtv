@@ -28,11 +28,11 @@ def test_home_refreshes_shortcuts_and_includes_vod_jellyfin_options():
     home = read_android("home/HomeFragment.kt")
 
     assert "override fun onResume()" in home
-    assert "buildAndLoadHomeRows()" in home
+    assert "loadRightPanelContent()" in home
     assert "QuadTvRoute.VOD" in home
-    assert "HomeAction(\"Jellyfin\", QuadTvRoute.JELLYFIN)" in home
-    assert "Favorite Live Channels" in home
-    assert "Recently Viewed Live Channels" in home
+    assert "HomeAction(\"QuadOnDemand\", QuadTvRoute.JELLYFIN)" in home
+    assert "Recently Watched Channels" in home
+    assert "Recently Watched Movies" in home
 
 
 def test_player_uses_friendly_tuning_copy_instead_of_debug_vlc_copy():

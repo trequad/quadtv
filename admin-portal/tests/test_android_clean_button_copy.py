@@ -21,5 +21,5 @@ def test_tv_button_cards_show_clean_single_line_titles_only():
 
 def test_home_quick_access_keeps_refresh_action_without_wordy_card_description():
     source = (ANDROID_SRC / "home/HomeFragment.kt").read_text()
-    assert 'add(HomeAction("Refresh Playlist & Guide", refreshProviderFeeds = true))' in source
+    assert 'HomeAction("Refresh", refreshProviderFeeds = true)' in source
     assert '"Fetch the latest playlist and EPG for this QuadTV account."' not in source

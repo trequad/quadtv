@@ -34,7 +34,7 @@ def test_jellyfin_detail_is_full_screen_with_description_and_play_button():
     assert "item.overview?.takeIf" in source
     assert 'text = "Play"' in source
     assert "playJellyfinItem(item)" in source
-    assert "jellyfinRepository.buildHlsStream(item.id)" in source
+    assert "jellyfinRepository.buildHlsStream(item.id, item.title)" in source
 
 
 def test_vod_browse_opens_detail_screen_and_shows_title_year():

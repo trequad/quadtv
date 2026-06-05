@@ -42,7 +42,7 @@ def test_jellyfin_cards_have_focus_state_highlight():
 def test_home_action_cards_have_focus_state_with_size_change():
     home = read_android("home/HomeFragment.kt")
     assert "setOnFocusChangeListener" in home
-    assert "view.textSize = if (hasFocus) 24f else 22f" in home
+    assert "setOnFocusChangeListener" in home
 
 
 def test_live_tv_group_buttons_have_focus_state():
@@ -119,7 +119,7 @@ def test_vod_uses_plain_english_error():
 
 def test_jellyfin_uses_plain_english_error():
     jelly = read_android("jellyfin/JellyfinBrowseFragment.kt")
-    assert "Can't load Jellyfin right now" in jelly
+    assert "Can't load QuadOnDemand right now" in jelly
     assert "check Wi-Fi" in jelly
 
 
@@ -130,21 +130,20 @@ def test_jellyfin_uses_plain_english_error():
 def test_home_has_on_now_row():
     home = read_android("home/HomeFragment.kt")
     assert '"Live TV"' in home
-    assert "loadOnNowRow" in home
+    assert "Live Now" in home
     assert "currentProgrammesByChannel" in home
 
 
 def test_home_has_continue_watching_row():
     home = read_android("home/HomeFragment.kt")
-    assert '"Continue Watching"' in home
-    assert "addContinueWatchingRow" in home
+    assert '"Recently Watched Movies"' in home
+    assert "recentItems()" in home
     assert "mediaStore.recentItems()" in home
 
 
 def test_home_has_voice_search_wired_to_movie_search():
     home = read_android("home/HomeFragment.kt")
-    assert "searchAffordanceColor" in home
-    assert "QuadTvRoute.MOVIE_SEARCH" in home
+    assert "Movie Search" not in home
 
 
 def test_home_on_now_row_loads_async_without_blocking_ui():

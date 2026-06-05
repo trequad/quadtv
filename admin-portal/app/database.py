@@ -42,6 +42,14 @@ def _ensure_sqlite_schema(engine) -> None:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE provider_accounts ADD COLUMN provider_password_secret VARCHAR(4096)"))
 
+    if "users" in inspector.get_table_names():
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        with engine.begin() as connection:
+            if "jellyfin_user_id" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN jellyfin_user_id VARCHAR(120)"))
+            if "jellyfin_username" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN jellyfin_username VARCHAR(120)"))
+
 
 def get_db() -> Generator[Session, None, None]:
     init_db()

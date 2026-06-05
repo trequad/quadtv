@@ -14,6 +14,7 @@ enum class QuadTvRoute {
     MOVIE_SEARCH,
     VOD,
     JELLYFIN,
+    SEERR,
     FAVORITES,
     RECENTLY_VIEWED,
     ONBOARDING,

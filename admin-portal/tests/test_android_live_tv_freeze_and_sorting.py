@@ -17,7 +17,8 @@ def test_live_tv_groups_are_alphabetical_with_adult_xxx_groups_last():
     assert "String.CASE_INSENSITIVE_ORDER" in source
     assert "xxx" in source.lower()
     assert "adult" in source.lower()
-    assert "channelsByGroup = sortedGroupNames(grouped.keys).associateWith" in source
+    assert "sortedGroupNames(grouped.keys).associateWith" in source
+    assert "ALL_CHANNELS_GROUP" in source
     assert ".toSortedMap()" not in source
 
 

@@ -146,24 +146,57 @@ class JellyfinDetailsFragment : Fragment() {
                 return@launch
             }
             seasons.forEach { season ->
-                container.addView(TextView(requireContext()).apply {
-                    text = "Season ${season.seasonNumber}"
+                container.addView(Button(requireContext()).apply {
+                    text = seasonLabel(season)
                     textSize = 22f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(Color.WHITE)
-                    setPadding(0, 12, 0, 8)
+                    isFocusable = true
+                    setOnClickListener { showEpisodesOverlay(item.id, season) }
                 })
-                val episodes = try {
-                    withContext(Dispatchers.IO) { jellyfinRepository.loadEpisodes(item.id, season) }
-                } catch (_: Throwable) { emptyList() }
-                episodes.forEach { episode ->
-                    container.addView(Button(requireContext()).apply {
-                        text = "Episode ${episode.episodeNumber}: ${episode.title}"
-                        textSize = 18f
-                        isFocusable = true
-                        setOnClickListener { playEpisode(episode) }
-                    })
-                }
+            }
+        }
+    }
+
+    private fun seasonLabel(season: JellyfinSeason): String = "Season ${season.seasonNumber}"
+
+    private fun showEpisodesOverlay(seriesId: String, season: JellyfinSeason) {
+        val episodeList = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 16, 24, 16)
+        }
+        val loading = TextView(requireContext()).apply {
+            text = "Loading episodes…"
+            textSize = 18f
+            setTextColor(Color.LTGRAY)
+        }
+        episodeList.addView(loading)
+        val dialog = android.app.AlertDialog.Builder(requireContext())
+            .setTitle(seasonLabel(season))
+            .setView(ScrollView(requireContext()).apply { addView(episodeList) })
+            .setNegativeButton("Close", null)
+            .show()
+        lifecycleScope.launch {
+            val episodes = try {
+                withContext(Dispatchers.IO) { jellyfinRepository.loadEpisodes(seriesId, season) }
+            } catch (_: Throwable) { emptyList() }
+            episodeList.removeView(loading)
+            if (episodes.isEmpty()) {
+                episodeList.addView(TextView(requireContext()).apply {
+                    text = "No episodes found for ${seasonLabel(season)}."
+                    textSize = 18f
+                    setTextColor(Color.LTGRAY)
+                })
+                return@launch
+            }
+            episodes.forEach { episode ->
+                episodeList.addView(Button(requireContext()).apply {
+                    text = "Episode ${episode.episodeNumber}: ${episode.title}"
+                    textSize = 18f
+                    isFocusable = true
+                    setOnClickListener {
+                        dialog.dismiss()
+                        playEpisode(episode)
+                    }
+                })
             }
         }
     }
@@ -184,12 +217,12 @@ class JellyfinDetailsFragment : Fragment() {
     private fun playJellyfinItem(item: JellyfinItem) {
         lifecycleScope.launch {
             val stream = try {
-                withContext(Dispatchers.IO) { jellyfinRepository.buildHlsStream(item.id) }
+                withContext(Dispatchers.IO) { jellyfinRepository.buildHlsStream(item.id, item.title) }
             } catch (_: Throwable) { null }
             if (stream == null) {
                 android.widget.Toast.makeText(
                     requireContext(),
-                    "Can't play — check your Jellyfin URL and API key in the admin portal.",
+                    "Can't play — check your QuadOnDemand server settings in the admin portal.",
                     android.widget.Toast.LENGTH_LONG
                 ).show()
                 return@launch
@@ -209,7 +242,7 @@ class JellyfinDetailsFragment : Fragment() {
             url = stream.hlsUrl,
             title = stream.title,
             isLive = false,
-            subtitle = "Jellyfin",
+            subtitle = "QuadOnDemand",
             nextTitle = "QuadMedia library"
         )
     }

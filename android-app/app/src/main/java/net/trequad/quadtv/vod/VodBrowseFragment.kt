@@ -63,7 +63,7 @@ class VodBrowseFragment : Fragment() {
         orientation = LinearLayout.HORIZONTAL
         setBackgroundColor(Color.rgb(7, 24, 39))
         val dp = context.resources.displayMetrics.density
-        val navWidth = (280 * dp).toInt()
+        val navWidth = (NAV_PANE_WIDTH_DP * dp).toInt()
 
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -121,8 +121,8 @@ class VodBrowseFragment : Fragment() {
             addView(statusText)
             contentContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             recyclerView = RecyclerView(context).apply {
-                val spanCount = calculateSpanCount(context)
-                layoutManager = GridLayoutManager(context, spanCount)
+                val spanCount = MEDIA_GRID_SPAN_COUNT
+                layoutManager = GridLayoutManager(context, MEDIA_GRID_SPAN_COUNT)
                 gridAdapter = VodGridAdapter(this@VodBrowseFragment, mediaStore) { item ->
                     parentFragmentManager.beginTransaction()
                         .replace(android.R.id.content, VodDetailsFragment.newInstance(item))
@@ -145,13 +145,17 @@ class VodBrowseFragment : Fragment() {
         })
 
         addView(divider(context, horizontal = false))
-        jumpRailContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
+        val jumpRailWidth = (JUMP_RAIL_WIDTH_DP * dp).toInt()
+        addView(ScrollView(context).apply {
             setBackgroundColor(Color.rgb(7, 18, 32))
-            setPadding((6 * dp).toInt(), (8 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt())
-            layoutParams = LinearLayout.LayoutParams((72 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
-        }
-        addView(jumpRailContainer)
+            isFillViewport = false
+            layoutParams = LinearLayout.LayoutParams(jumpRailWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+            jumpRailContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding((4 * dp).toInt(), (6 * dp).toInt(), (4 * dp).toInt(), (6 * dp).toInt())
+            }
+            addView(jumpRailContainer)
+        })
     }.also {
         loadNav()
     }
@@ -299,9 +303,10 @@ class VodBrowseFragment : Fragment() {
 
     private fun calculateSpanCount(context: Context): Int {
         val dp = context.resources.displayMetrics.density
-        val cardWidth = (150 * dp).toInt()
-        val navPaneWidth = (280 * dp).toInt()
-        return maxOf(2, (context.resources.displayMetrics.widthPixels - navPaneWidth) / cardWidth)
+        val cardWidth = (132 * dp).toInt()
+        val navPaneWidth = (NAV_PANE_WIDTH_DP * dp).toInt()
+        val jumpRailWidth = (JUMP_RAIL_WIDTH_DP * dp).toInt()
+        return MEDIA_GRID_SPAN_COUNT.coerceAtMost(maxOf(2, (context.resources.displayMetrics.widthPixels - navPaneWidth - jumpRailWidth) / cardWidth))
     }
 
     private fun buildJumpRail() {
@@ -317,12 +322,12 @@ class VodBrowseFragment : Fragment() {
         val dp = requireContext().resources.displayMetrics.density
         return TextView(requireContext()).apply {
             text = label
-            textSize = 13f
+            textSize = 11f
             gravity = android.view.Gravity.CENTER
             setTextColor(Color.WHITE)
             isFocusable = true
             isFocusableInTouchMode = true
-            setPadding(0, (5 * dp).toInt(), 0, (5 * dp).toInt())
+            setPadding(0, (3 * dp).toInt(), 0, (3 * dp).toInt())
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
                 view.setBackgroundColor(if (hasFocus) Color.rgb(66, 165, 245) else Color.TRANSPARENT)
@@ -331,13 +336,30 @@ class VodBrowseFragment : Fragment() {
     }
 
     private fun jumpToLetter(letter: Char) {
-        val position = currentItems.indexOfFirst { it.title.firstOrNull()?.uppercaseChar() == letter }
-        if (position >= 0) recyclerView.scrollToPosition(position)
+        val position = currentItems.indexOfFirst { it.title.jumpSortKey().firstOrNull() == letter }
+        if (position >= 0) jumpToGridPosition(position)
     }
 
     private fun jumpToReleaseYear(year: Int) {
         val position = currentItems.indexOfFirst { it.releaseYear == year }
-        if (position >= 0) recyclerView.scrollToPosition(position)
+        if (position >= 0) jumpToGridPosition(position)
+    }
+
+    private fun jumpToGridPosition(position: Int) {
+        (recyclerView.layoutManager as? GridLayoutManager)?.scrollToPositionWithOffset(position, 0)
+            ?: recyclerView.scrollToPosition(position)
+        recyclerView.post {
+            recyclerView.findViewHolderForAdapterPosition(position)?.itemView?.requestFocus()
+                ?: recyclerView.requestFocus()
+        }
+    }
+
+    private fun String.jumpSortKey(): String {
+        return trim()
+            .removePrefix("The ")
+            .removePrefix("A ")
+            .removePrefix("An ")
+            .uppercase()
     }
 
     private fun divider(context: Context, horizontal: Boolean) = View(context).apply {
@@ -375,6 +397,9 @@ class VodBrowseFragment : Fragment() {
     }
 
     companion object {
+        private const val NAV_PANE_WIDTH_DP = 220
+        private const val JUMP_RAIL_WIDTH_DP = 48
+        private const val MEDIA_GRID_SPAN_COUNT = 5
         private const val SECTION_RECENT = "__recent__"
         private const val SECTION_SERIES = "__series__"
         private const val SECTION_SEARCH = "__search__"
@@ -396,7 +421,7 @@ private class VodGridAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val dp = parent.context.resources.displayMetrics.density
-        val cardWidth = (150 * dp).toInt()
+        val cardWidth = (132 * dp).toInt()
         val card = LinearLayout(parent.context).apply {
             orientation = LinearLayout.VERTICAL
             isFocusable = true

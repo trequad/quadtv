@@ -42,8 +42,13 @@ def test_home_manual_refresh_runs_real_coordinator_with_progress_success_and_fai
     assert "lifecycleScope.launch" in home
     assert "withContext(Dispatchers.IO)" in home
     assert "refreshPlaylistAndGuide()" in home
-    assert "Fetching the latest channels and programme guide" in home
-    assert "guide entries are ready" in home
+    assert "Refreshing channels, EPG, and VOD content" in home
+    assert "guide entries" not in home
+    assert "totalCount" in home
+    assert "VOD Movies" in home
+    assert "VOD TV Shows" in home
+    assert "QuadOnDemand Movies" in home
+    assert "QuadOnDemand TV Shows" in home
     assert "Something went wrong" in home
     assert "Close" in home
     assert "raw feed" not in home.lower()

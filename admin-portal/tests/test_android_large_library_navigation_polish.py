@@ -31,7 +31,10 @@ def test_vod_and_jellyfin_browse_offer_alphabet_and_year_jump_rails():
         assert "jumpToReleaseYear" in source
         assert "A-Z" in source
         assert "Year" in source
-        assert "scrollToPosition" in source
+        assert "scrollToPositionWithOffset(position, 0)" in source
+        assert "requestFocus()" in source
+        assert "jumpSortKey" in source
+        assert "removePrefix(\"The \")" in source
 
 
 def test_vod_series_details_drills_into_seasons_and_episodes_before_playback():
@@ -45,9 +48,13 @@ def test_vod_series_details_drills_into_seasons_and_episodes_before_playback():
     assert "seriesPlaybackUrl" in repo_source
     assert "episodesBySeason" in repo_source
     assert "showSeriesSeasons" in details_source
+    assert "showEpisodesOverlay" in details_source
+    assert "android.app.AlertDialog.Builder(requireContext())" in details_source
+    assert "setTitle(seasonLabel(season))" in details_source
     assert "Season ${season.seasonNumber}" in details_source
     assert "playEpisode" in details_source
     assert "Episode ${episode.episodeNumber}" in details_source
+    assert "season.episodes.forEach" not in details_source
 
 
 def test_jellyfin_series_details_drills_into_seasons_and_episodes_before_playback():
@@ -62,5 +69,8 @@ def test_jellyfin_series_details_drills_into_seasons_and_episodes_before_playbac
     assert "Shows/$seriesId/Seasons" in repo_source
     assert "ParentId=${season.id}" in repo_source
     assert "showSeriesSeasons" in details_source
+    assert "showEpisodesOverlay" in details_source
+    assert "android.app.AlertDialog.Builder(requireContext())" in details_source
+    assert "setTitle(seasonLabel(season))" in details_source
     assert "Season ${season.seasonNumber}" in details_source
     assert "playEpisode" in details_source

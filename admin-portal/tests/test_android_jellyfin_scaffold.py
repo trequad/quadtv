@@ -38,12 +38,12 @@ def test_jellyfin_repository_uses_portal_config_api_key_and_okhttp_for_libraries
     assert 'suspend fun loadItems(libraryId: String): List<JellyfinItem>' in source
     assert 'suspend fun loadMovies(): List<JellyfinItem>' in source
     assert 'suspend fun loadSeries(): List<JellyfinItem>' in source
-    assert 'suspend fun buildHlsStream(itemId: String): JellyfinStream?' in source
+    assert 'suspend fun buildHlsStream(itemId: String, title: String): JellyfinStream?' in source
     assert 'jellyfinBaseUrl' in source
     assert 'X-Emby-Token' in source
     assert 'Items' in source
     assert 'Videos' in source
-    assert 'stream?static=true' in source
+    assert 'stream.ts' in source
 
 
 def test_jellyfin_browse_and_details_fragments_scaffold_home_section_and_playback_handoff():

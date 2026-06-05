@@ -10,7 +10,8 @@ data class BookmarkedLiveChannel(
     val name: String,
     val streamUrl: String,
     val groupTitle: String? = null,
-    val contentTitle: String? = null
+    val contentTitle: String? = null,
+    val logoUrl: String? = null
 )
 
 class LiveChannelBookmarkStore(context: Context) {
@@ -64,7 +65,8 @@ class LiveChannelBookmarkStore(context: Context) {
                     name = item.optString("name"),
                     streamUrl = item.optString("streamUrl"),
                     groupTitle = item.optString("groupTitle").takeIf { it.isNotBlank() },
-                    contentTitle = item.optString("contentTitle").takeIf { it.isNotBlank() }
+                    contentTitle = item.optString("contentTitle").takeIf { it.isNotBlank() },
+                    logoUrl = item.optString("logoUrl").takeIf { it.isNotBlank() }
                 )
             }.filter { it.id.isNotBlank() && it.name.isNotBlank() && it.streamUrl.isNotBlank() }
         }.getOrDefault(emptyList())
@@ -79,6 +81,7 @@ class LiveChannelBookmarkStore(context: Context) {
                 put("streamUrl", channel.streamUrl)
                 put("groupTitle", channel.groupTitle.orEmpty())
                 put("contentTitle", channel.contentTitle.orEmpty())
+                put("logoUrl", channel.logoUrl.orEmpty())
             })
         }
         preferences.edit().putString(key, array.toString()).apply()
@@ -98,6 +101,7 @@ fun LiveChannel.toBookmark(contentTitle: String? = null): BookmarkedLiveChannel 
         name = name,
         streamUrl = streamUrl,
         groupTitle = groupTitle,
-        contentTitle = contentTitle
+        contentTitle = contentTitle,
+        logoUrl = logoUrl
     )
 }

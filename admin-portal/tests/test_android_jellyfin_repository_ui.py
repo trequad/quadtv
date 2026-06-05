@@ -40,7 +40,7 @@ def test_jellyfin_browse_is_two_pane_fragment_with_section_nav():
 def test_jellyfin_browse_shows_error_message_not_crash():
     source = read_android("jellyfin/JellyfinBrowseFragment.kt")
 
-    assert "Can't load Jellyfin right now" in source
+    assert "Can't load QuadOnDemand right now" in source
     assert "showContentMessage" in source
 
 

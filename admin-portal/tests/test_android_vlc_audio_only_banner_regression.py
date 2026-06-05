@@ -12,10 +12,10 @@ def test_vlc_uses_android_display_rgb_software_path_for_vout_black_screen():
     source = read_android("player/VlcPlayerController.kt")
 
     assert "media.setHWDecoderEnabled(false, false)" in source
-    assert '":vout=android-display"' in source
-    assert '":android-display-chroma=RV32"' in source
     assert '":no-mediacodec-dr"' in source
     assert '":no-omxil-dr"' in source
+    assert '":vout=android-display"' not in source
+    assert '":android-display-chroma=RV32"' not in source
 
 
 def test_player_startup_status_banner_auto_hides_after_playback_starts():

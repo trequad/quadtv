@@ -40,6 +40,8 @@ class UserModel(Base):
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     app_username: Mapped[str | None] = mapped_column(String(120), unique=True, index=True, nullable=True)
     app_password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    jellyfin_user_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    jellyfin_username: Mapped[str | None] = mapped_column(String(120), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     expires_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

@@ -31,7 +31,7 @@ def test_jellyfin_details_navigates_hls_streams_to_bundled_player_route():
     assert "fun playJellyfinStream(stream: JellyfinStream): Boolean" in source
     assert "val request = buildPlaybackRequest(stream)" in source
     assert "navigator?.navigateToPlayer(request)" in source
-    assert "subtitle = \"Jellyfin\"" in source
+    assert "subtitle = \"QuadOnDemand\"" in source
     assert "nextTitle = \"QuadMedia library\"" in source
     assert "Intent(" not in source
 

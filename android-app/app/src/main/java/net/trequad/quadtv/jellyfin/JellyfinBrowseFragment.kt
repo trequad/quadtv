@@ -57,14 +57,14 @@ class JellyfinBrowseFragment : Fragment() {
         orientation = LinearLayout.HORIZONTAL
         setBackgroundColor(Color.rgb(7, 24, 39))
         val dp = context.resources.displayMetrics.density
-        val navWidth = (280 * dp).toInt()
+        val navWidth = (NAV_PANE_WIDTH_DP * dp).toInt()
 
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.rgb(12, 30, 50))
             layoutParams = LinearLayout.LayoutParams(navWidth, LinearLayout.LayoutParams.MATCH_PARENT)
             addView(TextView(context).apply {
-                text = "Jellyfin"
+                text = "QuadOnDemand"
                 textSize = 20f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(Color.rgb(66, 165, 245))
@@ -114,8 +114,8 @@ class JellyfinBrowseFragment : Fragment() {
             }
             addView(statusText)
             recyclerView = RecyclerView(context).apply {
-                val spanCount = calculateSpanCount(context)
-                layoutManager = GridLayoutManager(context, spanCount)
+                val spanCount = MEDIA_GRID_SPAN_COUNT
+                layoutManager = GridLayoutManager(context, MEDIA_GRID_SPAN_COUNT)
                 gridAdapter = JellyfinGridAdapter(this@JellyfinBrowseFragment, mediaStore) { item ->
                     parentFragmentManager.beginTransaction()
                         .replace(android.R.id.content, JellyfinDetailsFragment.newInstance(item))
@@ -138,13 +138,17 @@ class JellyfinBrowseFragment : Fragment() {
         })
 
         addView(divider(context, horizontal = false))
-        jumpRailContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
+        val jumpRailWidth = (JUMP_RAIL_WIDTH_DP * dp).toInt()
+        addView(ScrollView(context).apply {
             setBackgroundColor(Color.rgb(7, 18, 32))
-            setPadding((6 * dp).toInt(), (8 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt())
-            layoutParams = LinearLayout.LayoutParams((72 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
-        }
-        addView(jumpRailContainer)
+            isFillViewport = false
+            layoutParams = LinearLayout.LayoutParams(jumpRailWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+            jumpRailContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding((4 * dp).toInt(), (6 * dp).toInt(), (4 * dp).toInt(), (6 * dp).toInt())
+            }
+            addView(jumpRailContainer)
+        })
     }.also {
         buildNav()
         selectSection(SECTION_MOVIES, "Movies")
@@ -152,7 +156,7 @@ class JellyfinBrowseFragment : Fragment() {
 
     private fun buildNav() {
         sectionContainer.removeAllViews()
-        sectionContainer.addView(sectionLabel("Jellyfin"))
+        sectionContainer.addView(sectionLabel("QuadOnDemand"))
         addSectionButton("Movies", SECTION_MOVIES, selected = true)
         addSectionButton("TV Shows", SECTION_SHOWS)
     }
@@ -190,7 +194,7 @@ class JellyfinBrowseFragment : Fragment() {
             setSingleLine(true)
         }
         AlertDialog.Builder(requireContext())
-            .setTitle("Search Jellyfin")
+            .setTitle("Search QuadOnDemand")
             .setView(input)
             .setPositiveButton("Search") { _, _ -> searchContent(input.text.toString()) }
             .setNegativeButton("Cancel", null)
@@ -237,7 +241,7 @@ class JellyfinBrowseFragment : Fragment() {
                     }
                 }
             } catch (_: Throwable) {
-                statusText.text = "Can't load Jellyfin right now — check Wi-Fi and try again."
+                statusText.text = "Can't load QuadOnDemand right now — check Wi-Fi and try again."
                 isLoadingPage = false
                 return@launch
             }
@@ -250,7 +254,7 @@ class JellyfinBrowseFragment : Fragment() {
             buildJumpRail()
             statusText.text = when {
                 currentItems.isEmpty() && section == SECTION_SEARCH -> "No results for \"${query.orEmpty()}\"."
-                currentItems.isEmpty() -> "No items found. Check your Jellyfin URL and API key in the admin portal."
+                currentItems.isEmpty() -> "No items found. Check your QuadOnDemand server settings in the admin portal."
                 page.hasMore -> "Showing ${currentItems.size} of ${page.totalCount} — Load more by scrolling down."
                 else -> "Showing ${currentItems.size} of ${page.totalCount}."
             }
@@ -267,9 +271,10 @@ class JellyfinBrowseFragment : Fragment() {
 
     private fun calculateSpanCount(context: Context): Int {
         val dp = context.resources.displayMetrics.density
-        val cardWidth = (150 * dp).toInt()
-        val navPaneWidth = (280 * dp).toInt()
-        return maxOf(2, (context.resources.displayMetrics.widthPixels - navPaneWidth) / cardWidth)
+        val cardWidth = (132 * dp).toInt()
+        val navPaneWidth = (NAV_PANE_WIDTH_DP * dp).toInt()
+        val jumpRailWidth = (JUMP_RAIL_WIDTH_DP * dp).toInt()
+        return MEDIA_GRID_SPAN_COUNT.coerceAtMost(maxOf(2, (context.resources.displayMetrics.widthPixels - navPaneWidth - jumpRailWidth) / cardWidth))
     }
 
     private fun buildJumpRail() {
@@ -285,12 +290,12 @@ class JellyfinBrowseFragment : Fragment() {
         val dp = requireContext().resources.displayMetrics.density
         return TextView(requireContext()).apply {
             text = label
-            textSize = 13f
+            textSize = 11f
             gravity = android.view.Gravity.CENTER
             setTextColor(Color.WHITE)
             isFocusable = true
             isFocusableInTouchMode = true
-            setPadding(0, (5 * dp).toInt(), 0, (5 * dp).toInt())
+            setPadding(0, (3 * dp).toInt(), 0, (3 * dp).toInt())
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
                 view.setBackgroundColor(if (hasFocus) Color.rgb(66, 165, 245) else Color.TRANSPARENT)
@@ -299,13 +304,51 @@ class JellyfinBrowseFragment : Fragment() {
     }
 
     private fun jumpToLetter(letter: Char) {
-        val position = currentItems.indexOfFirst { it.title.firstOrNull()?.uppercaseChar() == letter }
-        if (position >= 0) recyclerView.scrollToPosition(position)
+        val localPosition = currentItems.indexOfFirst {
+            it.title.jumpSortKey().firstOrNull()?.uppercaseChar() == letter
+        }
+        if (localPosition >= 0) {
+            jumpToGridPosition(localPosition)
+            return
+        }
+        lifecycleScope.launch {
+            val offset = withContext(Dispatchers.IO) {
+                if (selectedSection == SECTION_SHOWS) jellyfinRepository.countSeriesBeforeLetter(letter)
+                else jellyfinRepository.countMoviesBeforeLetter(letter)
+            }
+            if (offset < currentTotalCount) jumpToPageOffset(offset)
+        }
+    }
+
+    private fun jumpToPageOffset(offset: Int) {
+        currentItems.clear()
+        currentTotalCount = 0
+        currentHasMore = false
+        gridAdapter.submitItems(emptyList())
+        statusText.text = "Loading…"
+        loadPage(startIndex = offset)
     }
 
     private fun jumpToReleaseYear(year: Int) {
         val position = currentItems.indexOfFirst { it.productionYear == year }
-        if (position >= 0) recyclerView.scrollToPosition(position)
+        if (position >= 0) jumpToGridPosition(position)
+    }
+
+    private fun jumpToGridPosition(position: Int) {
+        (recyclerView.layoutManager as? GridLayoutManager)?.scrollToPositionWithOffset(position, 0)
+            ?: recyclerView.scrollToPosition(position)
+        recyclerView.post {
+            recyclerView.findViewHolderForAdapterPosition(position)?.itemView?.requestFocus()
+                ?: recyclerView.requestFocus()
+        }
+    }
+
+    private fun String.jumpSortKey(): String {
+        return trim()
+            .removePrefix("The ")
+            .removePrefix("A ")
+            .removePrefix("An ")
+            .uppercase()
     }
 
     private fun divider(context: Context, horizontal: Boolean) = View(context).apply {
@@ -341,6 +384,9 @@ class JellyfinBrowseFragment : Fragment() {
     }
 
     companion object {
+        private const val NAV_PANE_WIDTH_DP = 220
+        private const val JUMP_RAIL_WIDTH_DP = 48
+        private const val MEDIA_GRID_SPAN_COUNT = 5
         private const val SECTION_MOVIES = "movies"
         private const val SECTION_SHOWS = "shows"
         private const val SECTION_SEARCH = "search"
@@ -362,7 +408,7 @@ private class JellyfinGridAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val dp = parent.context.resources.displayMetrics.density
-        val cardWidth = (150 * dp).toInt()
+        val cardWidth = (132 * dp).toInt()
         val card = LinearLayout(parent.context).apply {
             orientation = LinearLayout.VERTICAL
             isFocusable = true

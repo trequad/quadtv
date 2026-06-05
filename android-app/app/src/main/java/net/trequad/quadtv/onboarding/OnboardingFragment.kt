@@ -31,7 +31,7 @@ private val PAGES = listOf(
     OnboardingPage(
         emoji = "🎬",
         title = "Movies & Shows On Demand",
-        body = "Browse thousands of titles from VOD and Jellyfin. Pick a movie, press Play — it's that simple.",
+        body = "Browse thousands of titles from VOD and QuadOnDemand. Pick a movie, press Play — it's that simple.",
         tip = "Tip: Tap \"Add to Favorites\" on any details page to save it."
     ),
     OnboardingPage(

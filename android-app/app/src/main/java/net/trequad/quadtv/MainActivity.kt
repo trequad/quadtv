@@ -26,6 +26,7 @@ import net.trequad.quadtv.player.PlayerFragment
 import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.profiles.ProfilePickerFragment
 import net.trequad.quadtv.search.MovieSearchFragment
+import net.trequad.quadtv.seerr.SeerrFragment
 import net.trequad.quadtv.settings.SettingsFragment
 import net.trequad.quadtv.updates.AppUpdateRepository
 import net.trequad.quadtv.updates.UpdatePromptFragment
@@ -83,6 +84,7 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
             QuadTvRoute.MOVIE_SEARCH -> MovieSearchFragment()
             QuadTvRoute.VOD -> VodBrowseFragment()
             QuadTvRoute.JELLYFIN -> JellyfinBrowseFragment()
+            QuadTvRoute.SEERR -> SeerrFragment()
             QuadTvRoute.FAVORITES -> FavoritesFragment()
             QuadTvRoute.RECENTLY_VIEWED -> RecentlyViewedFragment()
             QuadTvRoute.ONBOARDING -> OnboardingFragment()

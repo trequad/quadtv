@@ -1,9 +1,11 @@
+import httpx
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import LoginRequest, TokenResponse, authenticate_admin, create_admin_token, create_customer_token, hash_provider_password, verify_provider_password
 from app.database import get_db
-from app.models import UserModel
+from app.models import AppConfigModel, UserModel
 from app.routers.subscriptions import _status_for_user
 from app.schemas import CustomerLoginRequest, CustomerLoginResponse, CustomerRegisterRequest
 
@@ -58,10 +60,14 @@ def register(request: CustomerRegisterRequest, db: Session = Depends(get_db)):
     if db.query(UserModel).filter(UserModel.app_username == username).one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
 
+    jellyfin_user_id, jellyfin_username = _create_jellyfin_account(db, username, request.password)
+
     user = UserModel(
         display_name=request.display_name.strip(),
         app_username=username,
         app_password_hash=hash_provider_password(request.password),
+        jellyfin_user_id=jellyfin_user_id,
+        jellyfin_username=jellyfin_username,
         active=True,
     )
     db.add(user)
@@ -74,3 +80,32 @@ def register(request: CustomerRegisterRequest, db: Session = Depends(get_db)):
         provider_username=user.app_username,
         expired=False,
     )
+
+
+def _create_jellyfin_account(db: Session, username: str, password: str) -> tuple[str | None, str | None]:
+    config = db.query(AppConfigModel).first()
+    if not config or not config.jellyfin_base_url or not config.jellyfin_api_key:
+        return None, None
+    base_url = config.jellyfin_base_url.rstrip("/")
+    headers = {"X-Emby-Token": config.jellyfin_api_key, "Content-Type": "application/json"}
+    try:
+        resp = httpx.post(
+            f"{base_url}/Users/New",
+            json={"Name": username, "Password": password},
+            headers=headers,
+            timeout=10,
+        )
+        if not resp.is_success:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Jellyfin account creation failed: {resp.status_code}",
+            )
+        data = resp.json()
+        return data.get("Id"), data.get("Name")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not reach Jellyfin: {exc}",
+        )

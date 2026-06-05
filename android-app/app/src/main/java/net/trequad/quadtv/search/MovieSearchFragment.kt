@@ -54,7 +54,7 @@ class MovieSearchFragment : Fragment() {
                 setTextColor(Color.WHITE)
             })
             addView(TextView(context).apply {
-                text = "Search once and QuadTV will show matching movies from VOD and Jellyfin when either source has them."
+                text = "Search once and QuadTV will show matching movies from VOD and QuadOnDemand when either source has them."
                 textSize = 19f
                 setTextColor(Color.LTGRAY)
                 setPadding(0, 8, 0, 24)
@@ -94,7 +94,7 @@ class MovieSearchFragment : Fragment() {
     private fun runMovieSearch(query: String) {
         if (query.isBlank()) return
         resultsContainer.removeAllViews()
-        resultsContainer.addView(messageView("Searching VOD and Jellyfin…"))
+        resultsContainer.addView(messageView("Searching VOD and QuadOnDemand…"))
         lifecycleScope.launch {
             val result = try {
                 val vod = async(Dispatchers.IO) { vodRepository.searchMovies(query) }
@@ -102,7 +102,7 @@ class MovieSearchFragment : Fragment() {
                 vod.await() to jellyfin.await()
             } catch (_: Exception) {
                 resultsContainer.removeAllViews()
-                resultsContainer.addView(messageView("Search failed. Check the configured VOD/Jellyfin endpoints and try again."))
+                resultsContainer.addView(messageView("Search failed. Check the configured VOD/QuadOnDemand endpoints and try again."))
                 return@launch
             }
             showResults(result.first, result.second)
@@ -112,7 +112,7 @@ class MovieSearchFragment : Fragment() {
     private fun showResults(vodResults: List<VodItem>, jellyfinResults: List<JellyfinItem>) {
         resultsContainer.removeAllViews()
         if (vodResults.isEmpty() && jellyfinResults.isEmpty()) {
-            resultsContainer.addView(messageView("No movies found in VOD or Jellyfin."))
+            resultsContainer.addView(messageView("No movies found in VOD or QuadOnDemand."))
             return
         }
         if (vodResults.isNotEmpty()) {
@@ -127,7 +127,7 @@ class MovieSearchFragment : Fragment() {
             }
         }
         if (jellyfinResults.isNotEmpty()) {
-            resultsContainer.addView(sectionHeader("Available on Jellyfin"))
+            resultsContainer.addView(sectionHeader("Available on QuadOnDemand"))
             jellyfinResults.forEach { item ->
                 resultsContainer.addView(resultButton(item.title, item.productionYear?.toString()) {
                     parentFragmentManager.beginTransaction()

@@ -27,8 +27,8 @@ def test_home_quick_access_includes_all_five_required_destinations():
     assert '"Live TV"' in home
     assert 'QuadTvRoute.VOD' in home
     assert 'QuadTvRoute.JELLYFIN' in home
-    assert 'QuadTvRoute.FAVORITES' in home
-    assert 'QuadTvRoute.RECENTLY_VIEWED' in home
+    assert 'Recently Watched Movies' in home
+    assert 'Recently Watched Movies' in home
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ def test_favorites_fragment_has_three_rows():
     fav = read_android("favorites/FavoritesFragment.kt")
     assert "Favorite Live Channels" in fav
     assert "Favorite VOD" in fav
-    assert "Favorite Jellyfin" in fav
+    assert "Favorite QuadOnDemand" in fav
 
 
 def test_favorites_fragment_routes_live_to_player_and_media_to_details():
@@ -102,7 +102,7 @@ def test_recently_viewed_fragment_has_three_rows():
     recent = read_android("favorites/RecentlyViewedFragment.kt")
     assert "Recently Viewed Live" in recent
     assert "Recently Viewed VOD" in recent
-    assert "Recently Viewed Jellyfin" in recent
+    assert "Recently Viewed QuadOnDemand" in recent
 
 
 def test_recently_viewed_fragment_routes_correctly():

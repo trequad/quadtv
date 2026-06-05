@@ -18,8 +18,6 @@ class VlcPlayerController(
             "--network-caching=3000",
             "--live-caching=3000",
             "--file-caching=3000",
-            "--vout=android-display",
-            "--android-display-chroma=RV32",
             "--no-drop-late-frames",
             "--no-skip-frames",
             "--verbose=2"
@@ -123,8 +121,6 @@ class VlcPlayerController(
         notifyStatus("play ${url.describePlaybackOutput()} cache=${networkCachingMs}ms")
         val media = Media(libVLC, Uri.parse(url))
         media.setHWDecoderEnabled(false, false)
-        media.addOption(":vout=android-display")
-        media.addOption(":android-display-chroma=RV32")
         media.addOption(":no-mediacodec-dr")
         media.addOption(":no-omxil-dr")
         media.addOption(":network-caching=$networkCachingMs")
