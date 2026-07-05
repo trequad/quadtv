@@ -25,7 +25,7 @@ android {
         applicationId = "net.trequad.quadtv"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
+        versionCode = 5
         // Version scheme: major.track.patch — track 0=release, 1=debug, 5=beta
         versionName = "1"
         ndk {
@@ -52,7 +52,7 @@ android {
         create("beta") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("beta")
-            versionNameSuffix = ".5.2"   // → 1.5.1 (beta track)
+            versionNameSuffix = ".5.3"   // → 1.5.1 (beta track)
         }
         debug {
             versionNameSuffix = ".1.0"   // → 1.1.0 (debug track)
