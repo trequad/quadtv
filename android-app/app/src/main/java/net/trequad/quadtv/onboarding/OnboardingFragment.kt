@@ -1,5 +1,6 @@
 package net.trequad.quadtv.onboarding
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -36,9 +37,9 @@ private val PAGES = listOf(
     ),
     OnboardingPage(
         emoji = "📝",
-        title = "Request with Seerr",
-        body = "Use Seerr to request movies and shows that are not in QuadOnDemand yet. Once approved, approved requests appear in QuadOnDemand.",
-        tip = "Tip: Seerr is for requests; QuadOnDemand is where approved movies and shows are watched."
+        title = "Request Movies & Shows",
+        body = "Use Requests to ask for movies and shows that are not in QuadOnDemand yet. Approved requests appear in QuadOnDemand.",
+        tip = "Tip: Requests is for asking; QuadOnDemand is where approved movies and shows are watched."
     ),
     OnboardingPage(
         emoji = "⭐",
@@ -102,7 +103,7 @@ class OnboardingFragment : Fragment() {
 
             dotsView = TextView(context).apply {
                 textSize = 28f
-                setTextColor(Color.rgb(66, 165, 245))
+                setTextColor(QuadTvTheme.ACCENT)
                 gravity = Gravity.CENTER
                 setPadding(0, 40, 0, 0)
             }

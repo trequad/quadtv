@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+from pathlib import Path
+import re
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -10,6 +12,15 @@ from app.models import AppReleaseModel
 from app.schemas import AppRelease, AppReleaseCreate, UpdateStatus
 
 router = APIRouter(prefix="/releases", tags=["App Releases"])
+DOWNLOADS_DIR = Path(__file__).resolve().parents[2] / "web" / "downloads"
+
+
+def _safe_apk_filename(filename: str) -> str:
+    name = Path(filename or "quadtv-update.apk").name
+    if not name.lower().endswith(".apk"):
+        raise HTTPException(status_code=400, detail="Only .apk files can be uploaded")
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip(".-")
+    return safe if safe.lower().endswith(".apk") else f"{safe}.apk"
 
 
 def _model_to_schema(model: AppReleaseModel) -> AppRelease:
@@ -45,17 +56,31 @@ def get_current_release(
         return UpdateStatus(update_available=False, forced_update_required=False, release=None)
 
     update_available = current_version_code is None or current_version_code < release.version_code
-    forced_update_required = bool(
-        update_available
-        and release.forced
-        and current_version_code is not None
-        and current_version_code < release.minimum_supported_version_code
-    )
+    forced_update_required = False
     return UpdateStatus(
         update_available=update_available,
         forced_update_required=forced_update_required,
         release=_model_to_schema(release) if update_available else None,
     )
+
+
+@router.post("/upload")
+async def upload_release_apk(
+    apk: UploadFile = File(...),
+    _admin: str = Depends(require_admin),
+):
+    filename = _safe_apk_filename(apk.filename or "quadtv-update.apk")
+    content = await apk.read()
+    if not content.startswith(b"PK\x03\x04"):
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid APK/ZIP package")
+    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    destination = DOWNLOADS_DIR / filename
+    destination.write_bytes(content)
+    return {
+        "filename": filename,
+        "apk_url": f"/downloads/{filename}",
+        "size_bytes": len(content),
+    }
 
 
 @router.post("", response_model=AppRelease)
@@ -69,8 +94,8 @@ def publish_release(
         version_code=release.version_code,
         changelog=release.changelog,
         apk_url=release.apk_url,
-        minimum_supported_version_code=release.minimum_supported_version_code,
-        forced=release.forced,
+        minimum_supported_version_code=0,
+        forced=False,
         published=release.published,
         release_date=release.release_date or datetime.now(timezone.utc),
     )

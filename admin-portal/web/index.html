@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuadTV Admin</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=20260605-release-autofill" />
 </head>
 <body>
   <header class="topbar">
@@ -65,17 +65,41 @@
               <input id="user-app-pin" type="password" inputmode="numeric" placeholder="QuadTV PIN (optional)" autocomplete="new-password" />
               <input id="user-app-password" type="password" placeholder="Legacy app password (optional)" autocomplete="new-password" />
             </div>
-            <label>Access package
-              <select id="user-access-package">
-                <option value="full_access">Full Access: Live TV + VOD + QuadOnDemand + Seerr</option>
-                <option value="live_tv_only">Live TV Only</option>
-                <option value="live_tv_vod">Live TV + VOD</option>
-                <option value="live_tv_quaddemand">Live TV + QuadOnDemand</option>
-              </select>
+            <div class="inline-form">
+              <label>Access package
+                <select id="user-access-package">
+                  <option value="full_access">Full Access</option>
+                  <option value="live_tv_only">Live TV Only</option>
+                  <option value="live_tv_vod">Live TV + VOD</option>
+                  <option value="live_tv_quaddemand">Live TV + QuadOnDemand</option>
+                </select>
+              </label>
+              <label>Expiration date (leave blank = no expiry)
+                <input id="user-expires-on" type="date" />
+              </label>
+            </div>
+            <div class="inline-form">
+              <input id="user-provider-username" placeholder="Provider username (optional)" autocomplete="off" />
+              <input id="user-provider-password" type="password" placeholder="Provider password (optional)" autocomplete="new-password" />
+            </div>
+            <label class="check">
+              <input id="user-provision-jellyfin" type="checkbox" checked />
+              Provision QuadOnDemand (Jellyfin) login automatically
             </label>
-            <button type="submit">Add user</button>
+            <button type="submit">Create customer</button>
           </form>
-          <div id="users-list" class="list"></div>
+          <div id="user-setup-summary"></div>
+          <div style="border-top:1px solid var(--line);margin:1.25rem 0 1rem;"></div>
+          <label>Search users
+            <input id="user-search" placeholder="Type a name, username, email, or user ID" autocomplete="off" />
+          </label>
+          <label>Select user to view &amp; edit
+            <select id="user-detail-select">
+              <option value="">Loading users…</option>
+            </select>
+          </label>
+          <p id="user-selector-status" class="item-meta"></p>
+          <div id="user-detail-panel" style="margin-top:.85rem"></div>
         </article>
 
         <article id="devices-panel" class="card">
@@ -95,15 +119,61 @@
       </section>
 
       <section class="grid two">
+        <article id="releases-panel" class="card">
+          <p class="eyebrow">OTA updates</p>
+          <h2>Publish release</h2>
+          <p>Beta testers with the app installed will be prompted to download and install the new APK automatically on next launch.</p>
+          <form id="publish-release-form" class="stack">
+            <label>Version name (e.g. 1.0.0-beta2)
+              <input id="release-version-name" placeholder="1.0.0-beta2" required />
+            </label>
+            <label>Version code (integer, must be higher than previous)
+              <input id="release-version-code" type="number" min="1" placeholder="3" required />
+            </label>
+            <label>APK download URL — auto-filled after upload
+              <input id="release-apk-url" type="url" placeholder="Upload an APK and this fills itself" readonly required />
+            </label>
+            <div class="inline-form">
+              <label>Upload APK from this computer
+                <input id="release-apk-file" type="file" accept=".apk,application/vnd.android.package-archive" />
+              </label>
+              <button id="upload-release-apk-button" type="button" class="ghost">Upload APK</button>
+            </div>
+            <input id="release-min-version-code" type="hidden" value="0" />
+            <label>Changelog
+              <textarea id="release-changelog" rows="3" placeholder="What's new in this release"></textarea>
+            </label>
+            <button type="submit">Publish release</button>
+          </form>
+          <p id="release-status" class="status-line"></p>
+          <div id="releases-list" class="list"></div>
+        </article>
+
+        <article id="release-info-panel" class="card">
+          <p class="eyebrow">Current live release</p>
+          <h2>Active update</h2>
+          <div id="current-release-info" class="list"><p class="muted">No published release yet.</p></div>
+          <p style="margin-top:12px;font-size:0.85em;color:#888">
+            To publish a new beta APK: choose the APK, click Upload APK, review the auto-filled version fields,
+            add changelog if needed, then click Publish. Updates are published as optional downloads only.
+          </p>
+        </article>
+      </section>
+
+      <section class="grid two">
         <article id="endpoint-config-panel" class="card">
           <p class="eyebrow">App bootstrap</p>
           <h2>Endpoint config</h2>
           <form id="config-form" class="stack">
-            <label>Live TV M3U endpoint<input id="config-live" required /></label>
-            <label>XMLTV endpoint<input id="config-xmltv" required /></label>
-            <label>VOD endpoint<input id="config-vod" required /></label>
-            <label>Jellyfin URL<input id="config-jellyfin-url" /></label>
-            <label>Jellyfin API key<input id="config-jellyfin-key" /></label>
+            <label>Live TV provider base URL<input id="config-live" placeholder="http://provider.example:port" required /></label>
+            <label>VOD provider base URL<input id="config-vod" placeholder="https://provider.example" required /></label>
+            <label>Jellyfin URL (QuadOnDemand)<input id="config-jellyfin-url" /></label>
+            <label>Jellyfin API key (write-only)<input id="config-jellyfin-key" type="password" autocomplete="new-password" /></label>
+            <label>Seerr URL (Requests)<input id="config-seerr-url" placeholder="http://host:5055" /></label>
+            <div class="grid two compact">
+              <label>Seerr operator email<input id="config-seerr-email" autocomplete="off" /></label>
+              <label>Seerr operator password (write-only)<input id="config-seerr-password" type="password" autocomplete="new-password" /></label>
+            </div>
             <div class="grid three compact">
               <label>Max profiles/device<input id="config-max-profiles" type="number" min="1" required /></label>
               <label>Live streams/user<input id="config-live-limit" type="number" min="1" required /></label>
@@ -178,52 +248,12 @@
         </article>
       </section>
 
-      <section class="grid two">
-        <article id="releases-panel" class="card">
-          <p class="eyebrow">OTA updates</p>
-          <h2>Publish release</h2>
-          <p>Beta testers with the app installed will be prompted to download and install the new APK automatically on next launch.</p>
-          <form id="publish-release-form" class="stack">
-            <label>Version name (e.g. 1.0.0-beta2)
-              <input id="release-version-name" placeholder="1.0.0-beta2" required />
-            </label>
-            <label>Version code (integer, must be higher than previous)
-              <input id="release-version-code" type="number" min="1" placeholder="3" required />
-            </label>
-            <label>APK download URL
-              <input id="release-apk-url" type="url" placeholder="https://example.invalid/downloads/QuadTV-beta-x.x.x.apk" required />
-            </label>
-            <label>Minimum supported version code (devices below this are force-updated)
-              <input id="release-min-version-code" type="number" min="1" placeholder="2" required />
-            </label>
-            <label>Changelog
-              <textarea id="release-changelog" rows="3" placeholder="What's new in this release"></textarea>
-            </label>
-            <label class="inline-check">
-              <input id="release-forced" type="checkbox" />
-              Force update (block app until updated)
-            </label>
-            <button type="submit">Publish release</button>
-          </form>
-          <p id="release-status" class="status-line"></p>
-          <div id="releases-list" class="list"></div>
-        </article>
 
-        <article id="release-info-panel" class="card">
-          <p class="eyebrow">Current live release</p>
-          <h2>Active update</h2>
-          <div id="current-release-info" class="list"><p class="muted">No published release yet.</p></div>
-          <p style="margin-top:12px;font-size:0.85em;color:#888">
-            To publish a new beta APK: build the signed APK on Odin, copy it into the quadtv-admin container's
-            <code>/app/web/downloads/</code> folder, then fill in the form on the left and click Publish.
-          </p>
-        </article>
-      </section>
     </section>
 
     <p id="global-status" class="toast" hidden></p>
   </main>
 
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=20260617-provider-config" defer></script>
 </body>
 </html>

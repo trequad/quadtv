@@ -138,6 +138,25 @@ class VlcPlayerController(
         mediaPlayer.stop()
     }
 
+    override fun pause() {
+        pendingPlaybackRequest = null
+        if (mediaPlayer.isPlaying) {
+            mediaPlayer.pause()
+        }
+    }
+
+    override fun resume() {
+        attachViewsIfReady()
+        mediaPlayer.play()
+    }
+
+    override fun seekBy(milliseconds: Long) {
+        val duration = mediaPlayer.getLength().takeIf { it > 0 } ?: Long.MAX_VALUE
+        val currentTime = mediaPlayer.getTime().coerceAtLeast(0L)
+        val targetTime = (currentTime + milliseconds).coerceIn(0L, duration)
+        mediaPlayer.setTime(targetTime)
+    }
+
     override fun release() {
         pendingPlaybackRequest = null
         playbackErrorListener = null

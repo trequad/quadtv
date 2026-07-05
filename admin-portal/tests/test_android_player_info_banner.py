@@ -67,8 +67,9 @@ def test_player_info_banner_has_physical_control_buttons():
     assert "private lateinit var playbackControlRow: LinearLayout" in source
     assert "buildPlaybackControlRow" in source
     assert "controlButton(\"Back\")" in source
-    assert "controlButton(\"Channel −\")" in source
-    assert "controlButton(\"Channel +\")" in source
+    # Channel zap buttons are icons (previous/next) since 2026-07-04.
+    assert "ic_media_previous" in source
+    assert "ic_media_next" in source
     assert "onBackPressedDispatcher.onBackPressed()" in source
 
 

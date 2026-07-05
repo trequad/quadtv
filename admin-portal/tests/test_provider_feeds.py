@@ -85,13 +85,13 @@ def test_customer_provider_feed_endpoint_resolves_provider_urls_server_side(tmp_
     assert response.status_code == 200
     body = response.json()
     assert body["live_tv_playlist_url"].startswith(
-        "http://by.questreams.com:83/get.php?username=iptv001&password="
+        "http://ahhshitherewegoagain.sytes.net/get.php?username=iptv001&password="
     )
     assert "type=m3u_plus" in body["live_tv_playlist_url"]
     assert "output=mpegts" in body["live_tv_playlist_url"]
     assert "output=m3u8" not in body["live_tv_playlist_url"]
     assert body["xmltv_url"].startswith(
-        "http://by.questreams.com:83/xmltv.php?username=iptv001&password="
+        "http://ahhshitherewegoagain.sytes.net/xmltv.php?username=iptv001&password="
     )
     assert body["provider_username"] == "iptv001"
     assert body["refresh_hours"] == 24

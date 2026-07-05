@@ -48,7 +48,30 @@ def test_admin_dashboard_serves_operator_ui_shell(tmp_path, monkeypatch):
     assert "id=\"announcements-panel\"" in html
     assert "id=\"provider-sync-panel\"" in html
     assert "id=\"provider-sync-form\"" in html
+    assert "id=\"user-detail-select\"" in html
+    assert "id=\"user-detail-panel\"" in html
+    assert "id=\"publish-release-form\"" in html
+    assert "Publish release" in html
+    # Users are the operator's primary daily workspace; releases come after.
+    assert html.index('id="users-panel"') < html.index('id="releases-panel"')
     assert "app.js" in html
+
+
+def test_admin_users_panel_uses_single_selected_user_detail_instead_of_rendering_every_user_card():
+    html = (PROJECT_ROOT / "web" / "index.html").read_text()
+    js = (PROJECT_ROOT / "web" / "app.js").read_text()
+
+    assert 'id="user-detail-select"' in html
+    assert 'id="user-detail-panel"' in html
+    assert 'id="user-search"' in html
+    assert 'id="user-selector-status"' in html
+    assert 'id="users-list"' not in html
+    assert "$('users-list')" not in js
+    assert "function selectedUser()" in js
+    assert "state.selectedUserId" in js
+    assert "state.userFilter" in js
+    assert "userMatchesFilter" in js
+    assert "users shown in dropdown" in js
 
 
 def test_admin_dashboard_css_preserves_hidden_state():

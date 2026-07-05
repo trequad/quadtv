@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -20,6 +21,7 @@ import androidx.fragment.app.Fragment
 import net.trequad.quadtv.core.cache.PlayerSettingsCache
 import net.trequad.quadtv.live.BookmarkedLiveChannel
 import net.trequad.quadtv.live.LiveChannelBookmarkStore
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import net.trequad.quadtv.navigation.QuadTvNavigator
 import net.trequad.quadtv.navigation.QuadTvRoute
 import org.videolan.libvlc.util.VLCVideoLayout
@@ -41,11 +43,13 @@ class PlayerFragment : Fragment() {
     private lateinit var infoBannerTimeView: TextView
     private lateinit var infoBannerProgressBar: ProgressBar
     private lateinit var playbackControlRow: LinearLayout
+    private var pausePlayButton: ImageButton? = null
     private val infoBannerHideHandler = Handler(Looper.getMainLooper())
     private val startupStatusHideHandler = Handler(Looper.getMainLooper())
     private val diagnosticStatusHideHandler = Handler(Looper.getMainLooper())
     private var currentRequest: StreamPlaybackRequest? = null
     private var currentEngine: PlayerEngine = PlayerEngine.VLC
+    private var isOnDemandPaused = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,7 +60,7 @@ class PlayerFragment : Fragment() {
         enterImmersivePlaybackMode()
         currentRequest = request
         val root = FrameLayout(requireContext()).apply {
-            setBackgroundColor(Color.rgb(8, 18, 32))
+            setBackgroundColor(QuadTvTheme.BACKGROUND)
             isFocusable = true
             isFocusableInTouchMode = true
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
@@ -138,7 +142,7 @@ class PlayerFragment : Fragment() {
         }
         infoBannerGroupView = TextView(requireContext()).apply {
             textSize = 18f
-            setTextColor(Color.rgb(188, 224, 253))
+            setTextColor(QuadTvTheme.TEXT_SECONDARY)
         }
         infoBannerContentView = TextView(requireContext()).apply {
             textSize = 20f
@@ -146,12 +150,12 @@ class PlayerFragment : Fragment() {
         }
         infoBannerNextView = TextView(requireContext()).apply {
             textSize = 18f
-            setTextColor(Color.rgb(244, 248, 251))
+            setTextColor(QuadTvTheme.TEXT_PRIMARY)
         }
         infoBannerTimeView = TextView(requireContext()).apply {
             textSize = 18f
             gravity = Gravity.END
-            setTextColor(Color.rgb(66, 165, 245))
+            setTextColor(QuadTvTheme.ACCENT)
         }
         infoBannerProgressBar = ProgressBar(requireContext(), null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
@@ -169,7 +173,7 @@ class PlayerFragment : Fragment() {
             addView(infoBannerNextView)
             addView(infoBannerTimeView)
             addView(infoBannerProgressBar)
-            addView(buildPlaybackControlRow())
+            addView(buildPlaybackControlRow(request))
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -193,16 +197,24 @@ class PlayerFragment : Fragment() {
         infoBannerProgressBar.progress = if (request.isLive) 50 else 0
     }
 
-    private fun buildPlaybackControlRow(): LinearLayout {
+    private fun buildPlaybackControlRow(request: StreamPlaybackRequest): LinearLayout {
         playbackControlRow = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, 18, 0, 0)
             addView(controlButton("⌂ Home") { (activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.HOME) })
             addView(controlButton("Back") { requireActivity().onBackPressedDispatcher.onBackPressed() })
-            addView(controlButton("Favorite") { toggleCurrentFavorite() })
-            addView(controlButton("Channel −") { switchLiveChannel(offset = -1) })
-            addView(controlButton("Channel +") { switchLiveChannel(offset = 1) })
+            if (request.isLive) {
+                addView(iconControlButton(android.R.drawable.btn_star_big_off, "Add or remove favorite") { toggleCurrentFavorite() })
+                addView(iconControlButton(android.R.drawable.ic_media_previous, "Previous channel") { switchLiveChannel(offset = -1) })
+                addView(iconControlButton(android.R.drawable.ic_media_next, "Next channel") { switchLiveChannel(offset = 1) })
+            }
+            if (!request.isLive) {
+                addView(iconControlButton(android.R.drawable.ic_media_rew, "Rewind 30 seconds") { seekOnDemand(offsetMs = -SEEK_STEP_MS) })
+                pausePlayButton = iconControlButton(android.R.drawable.ic_media_pause, "Pause or resume") { togglePauseResume() }
+                    .also { addView(it) }
+                addView(iconControlButton(android.R.drawable.ic_media_ff, "Forward 30 seconds") { seekOnDemand(offsetMs = SEEK_STEP_MS) })
+            }
         }
         return playbackControlRow
     }
@@ -213,6 +225,30 @@ class PlayerFragment : Fragment() {
             textSize = 18f
             isFocusable = true
             setPadding(20, 10, 20, 10)
+            setOnClickListener { onClick() }
+        }
+    }
+
+    /** Icon transport buttons (play/pause/seek/channel): D-pad focusable, 56dp targets. */
+    private fun iconControlButton(iconRes: Int, description: String, onClick: () -> Unit): ImageButton {
+        val dp = requireContext().resources.displayMetrics.density
+        return ImageButton(requireContext()).apply {
+            setImageResource(iconRes)
+            contentDescription = description
+            isFocusable = true
+            isFocusableInTouchMode = true
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setColorFilter(QuadTvTheme.TEXT_PRIMARY)
+            setBackgroundColor(QuadTvTheme.SURFACE)
+            setPadding((12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt())
+            layoutParams = LinearLayout.LayoutParams((56 * dp).toInt(), (56 * dp).toInt()).apply {
+                leftMargin = (8 * dp).toInt()
+            }
+            setOnFocusChangeListener { view, hasFocus ->
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
+                view.scaleX = if (hasFocus) 1.08f else 1f
+                view.scaleY = if (hasFocus) 1.08f else 1f
+            }
             setOnClickListener { onClick() }
         }
     }
@@ -232,6 +268,17 @@ class PlayerFragment : Fragment() {
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_CHANNEL_DOWN -> {
                 switchLiveChannel(offset = -1)
+            }
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            KeyEvent.KEYCODE_MEDIA_PLAY,
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                togglePauseResume()
+            }
+            KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                seekOnDemand(offsetMs = -SEEK_STEP_MS)
+            }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                seekOnDemand(offsetMs = SEEK_STEP_MS)
             }
             KeyEvent.KEYCODE_BACK -> {
                 if (infoBannerContainer.visibility == View.VISIBLE) {
@@ -265,6 +312,40 @@ class PlayerFragment : Fragment() {
         statusView.visibility = View.VISIBLE
         startBundledPlayback(switchedRequest.copy(bufferConfig = request.bufferConfig))
         showInfoBanner()
+        return true
+    }
+
+    private fun togglePauseResume(): Boolean {
+        val request = currentRequest ?: return false
+        if (request.isLive) return false
+        if (isOnDemandPaused) {
+            activePlayer?.resume()
+            isOnDemandPaused = false
+            pausePlayButton?.setImageResource(android.R.drawable.ic_media_pause)
+            pausePlayButton?.contentDescription = "Pause"
+            statusView.text = "QuadMedia • QuadTV\nResumed ${request.title ?: "on-demand content"}"
+        } else {
+            activePlayer?.pause()
+            isOnDemandPaused = true
+            pausePlayButton?.setImageResource(android.R.drawable.ic_media_play)
+            pausePlayButton?.contentDescription = "Resume"
+            statusView.text = "QuadMedia • QuadTV\nPaused ${request.title ?: "on-demand content"}"
+        }
+        statusView.visibility = View.VISIBLE
+        showInfoBanner()
+        hideStartupStatusSoon()
+        return true
+    }
+
+    private fun seekOnDemand(offsetMs: Long): Boolean {
+        val request = currentRequest ?: return false
+        if (request.isLive) return false
+        activePlayer?.seekBy(offsetMs)
+        val direction = if (offsetMs < 0) "Rewound" else "Skipped forward"
+        statusView.text = "QuadMedia • QuadTV\n$direction 30 seconds"
+        statusView.visibility = View.VISIBLE
+        showInfoBanner()
+        hideStartupStatusSoon()
         return true
     }
 
@@ -380,6 +461,9 @@ class PlayerFragment : Fragment() {
     private fun startBundledPlayback(playableRequest: StreamPlaybackRequest, selectedEngine: PlayerEngine) {
         activePlayer?.release()
         activePlayer = null
+        isOnDemandPaused = false
+        pausePlayButton?.setImageResource(android.R.drawable.ic_media_pause)
+        pausePlayButton?.contentDescription = "Pause"
         currentEngine = selectedEngine
         retryButton.visibility = View.GONE
         showStartupStatus()
@@ -500,6 +584,7 @@ class PlayerFragment : Fragment() {
         private const val INFO_BANNER_AUTO_HIDE_MS = 5_000L
         private const val STARTUP_STATUS_AUTO_HIDE_MS = 2_500L
         private const val DIAGNOSTIC_STATUS_AUTO_HIDE_MS = 8_000L
+        private const val SEEK_STEP_MS = 30_000L
 
         fun newInstance(request: StreamPlaybackRequest): PlayerFragment {
             return PlayerFragment().apply {

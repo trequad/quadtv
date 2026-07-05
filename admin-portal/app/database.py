@@ -62,6 +62,16 @@ def _ensure_sqlite_schema(engine) -> None:
             if "can_access_seerr" not in user_columns:
                 connection.execute(text("ALTER TABLE users ADD COLUMN can_access_seerr BOOLEAN NOT NULL DEFAULT 1"))
 
+    if "app_config" in inspector.get_table_names():
+        app_config_columns = {column["name"] for column in inspector.get_columns("app_config")}
+        with engine.begin() as connection:
+            if "seerr_base_url" not in app_config_columns:
+                connection.execute(text("ALTER TABLE app_config ADD COLUMN seerr_base_url VARCHAR(2048)"))
+            if "seerr_email" not in app_config_columns:
+                connection.execute(text("ALTER TABLE app_config ADD COLUMN seerr_email VARCHAR(255)"))
+            if "seerr_password_secret" not in app_config_columns:
+                connection.execute(text("ALTER TABLE app_config ADD COLUMN seerr_password_secret VARCHAR(4096)"))
+
     if "profiles" in inspector.get_table_names():
         profile_columns = {column["name"] for column in inspector.get_columns("profiles")}
         if "user_id" not in profile_columns:

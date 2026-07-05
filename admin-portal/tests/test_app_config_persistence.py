@@ -57,7 +57,14 @@ def test_app_config_update_persists_across_app_restart(tmp_path, monkeypatch):
     get_response = restarted_client.get("/api/v1/app/config")
 
     assert get_response.status_code == 200
-    assert get_response.json() == payload
+    body = get_response.json()
+    # Secrets are write-only: never echoed back, only reported as set.
+    assert body["jellyfin_api_key"] is None
+    assert body["jellyfin_api_key_set"] is True
+    assert "jellyfin-secret" not in get_response.text
+    expected = {key: value for key, value in payload.items() if key != "jellyfin_api_key"}
+    for key, value in expected.items():
+        assert body[key] == value
 
 
 def test_default_config_contains_confirmed_stream_entitlements(tmp_path, monkeypatch):
@@ -67,7 +74,7 @@ def test_default_config_contains_confirmed_stream_entitlements(tmp_path, monkeyp
 
     assert response.status_code == 200
     body = response.json()
-    assert body["live_tv_provider_base_url"] == "http://by.questreams.com:83"
+    assert body["live_tv_provider_base_url"] == "http://ahhshitherewegoagain.sytes.net/"
     assert body["vod_provider_base_url"] == "https://livinitup.online"
     assert body["provider_feed_refresh_hours"] == 24
     assert body["live_stream_limit_per_user"] == 3

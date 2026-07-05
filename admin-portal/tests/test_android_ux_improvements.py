@@ -31,7 +31,8 @@ def test_jellyfin_browse_uses_vertical_list_layout():
 def test_vod_cards_have_focus_state_highlight():
     vod = read_android("vod/VodBrowseFragment.kt")
     assert "setOnFocusChangeListener" in vod
-    assert "Color.rgb(66, 165, 245)" in vod
+    # Colors come from the shared design tokens since the 2026-07 theme sweep.
+    assert "QuadTvTheme.ACCENT" in vod
 
 
 def test_jellyfin_cards_have_focus_state_highlight():
@@ -52,7 +53,7 @@ def test_live_tv_group_buttons_have_focus_state():
 
 def test_live_tv_channel_cards_have_focus_state():
     live = read_android("live/LiveTvFragment.kt")
-    assert "Color.rgb(44, 95, 124)" in live  # focused background color
+    assert "QuadTvTheme.FOCUS" in live  # focused background color token
 
 
 # ---------------------------------------------------------------------------
@@ -188,11 +189,12 @@ def test_onboarding_fragment_has_three_pages_with_skip_and_get_started():
     assert "QuadTvRoute.LOGIN" in onboarding
 
 
-def test_onboarding_fragment_explains_seerr_requests_and_quaddemand():
+def test_onboarding_fragment_explains_requests_and_quaddemand():
     onboarding = read_android("onboarding/OnboardingFragment.kt")
-    assert "Seerr" in onboarding
-    assert "request movies and shows" in onboarding
-    assert "approved requests" in onboarding
+    # Customer copy says "Requests"; Seerr is an internal service name.
+    assert "Seerr" not in onboarding
+    assert "Request Movies & Shows" in onboarding
+    assert "Approved requests appear in QuadOnDemand" in onboarding
     assert "QuadOnDemand" in onboarding
 
 

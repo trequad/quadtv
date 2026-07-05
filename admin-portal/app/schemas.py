@@ -5,7 +5,14 @@ class AppConfig(BaseModel):
     live_tv_provider_base_url: str
     vod_provider_base_url: str
     jellyfin_base_url: str | None = None
+    # Secrets are write-only: accepted on PUT, always returned as None with a
+    # matching *_set flag so the public config endpoint never leaks them.
     jellyfin_api_key: str | None = None
+    jellyfin_api_key_set: bool = False
+    seerr_base_url: str | None = None
+    seerr_email: str | None = None
+    seerr_password: str | None = None
+    seerr_password_set: bool = False
     max_profiles_per_device: int = 5
     warning_threshold_days: list[int] = [14, 7, 3, 0]
     live_stream_limit_per_user: int = 3
@@ -65,6 +72,7 @@ class UserCreate(BaseModel):
     app_password: str | None = None
     app_pin: str | None = None
     access_package: str = "full_access"
+    expires_on: date | None = None
     can_access_live_tv: bool | None = None
     can_access_vod: bool | None = None
     can_access_quaddemand: bool | None = None
@@ -214,6 +222,10 @@ class CustomerLoginResponse(BaseModel):
     can_access_vod: bool = True
     can_access_quaddemand: bool = True
     can_access_seerr: bool = True
+    # Per-user QuadOnDemand session (set when Jellyfin auth succeeds at login).
+    jellyfin_base_url: str | None = None
+    jellyfin_user_id: str | None = None
+    jellyfin_access_token: str | None = None
     message: str | None = None
 
 
@@ -244,3 +256,50 @@ class UpdateStatus(BaseModel):
     update_available: bool
     forced_update_required: bool = False
     release: AppRelease | None = None
+
+
+class UserFullSetupRequest(UserCreate):
+    """One-flow admin user setup: local account + entitlements + integrations."""
+
+    provider_username: str | None = None
+    provider_password: str | None = None
+    provision_jellyfin: bool = True
+
+
+class UserSetupSummary(BaseModel):
+    """What the one-flow setup created, linked, and still needs manual action."""
+
+    user: User
+    jellyfin_status: str
+    jellyfin_detail: str | None = None
+    provider_live_tv: str
+    provider_vod: str
+    warnings: list[str] = []
+    next_steps: list[str] = []
+
+
+class UserOverviewDevice(BaseModel):
+    id: int
+    device_name: str
+    app_version: str | None = None
+    active: bool
+
+
+class UserOverviewJellyfin(BaseModel):
+    provisioned: bool
+    username: str | None = None
+    jellyfin_user_id: str | None = None
+
+
+class UserOverviewProviderAccount(BaseModel):
+    provider_type: str
+    provider_username: str
+    sync_status: str
+
+
+class UserOverview(BaseModel):
+    user: User
+    subscription: SubscriptionStatus
+    jellyfin: UserOverviewJellyfin
+    provider_accounts: list[UserOverviewProviderAccount]
+    devices: list[UserOverviewDevice]

@@ -1,5 +1,6 @@
 package net.trequad.quadtv.home
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
@@ -44,6 +45,7 @@ import net.trequad.quadtv.player.StreamPlaybackRequest
 import net.trequad.quadtv.provider.ProviderFeedRefreshCoordinator
 import net.trequad.quadtv.provider.ProviderFeedRepository
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.vod.VodDetailsFragment
 import net.trequad.quadtv.vod.VodItem
 import net.trequad.quadtv.vod.VodRepository
@@ -54,8 +56,7 @@ data class HomeAction(
     val route: QuadTvRoute? = null,
     val refreshProviderFeeds: Boolean = false,
     val playbackRequest: StreamPlaybackRequest? = null,
-    val mediaItem: BookmarkedMediaItem? = null,
-    val opensSeerrPlaceholder: Boolean = false
+    val mediaItem: BookmarkedMediaItem? = null
 )
 
 private data class HomeMediaTile(
@@ -79,6 +80,9 @@ class HomeFragment : Fragment() {
     private lateinit var menuScrollView: ScrollView
     private lateinit var menuContainer: LinearLayout
     private lateinit var rightContainer: LinearLayout
+    private val customerSession by lazy {
+        net.trequad.quadtv.core.AppServices.sessionCache(requireContext()).load()
+    }
 
     override fun onCreateView(
         inflater: android.view.LayoutInflater,
@@ -87,13 +91,72 @@ class HomeFragment : Fragment() {
     ): View {
         val context = requireContext()
         val dp = context.resources.displayMetrics.density
+        return if (isPhonePortrait()) {
+            createPhonePortraitLayout(context, dp)
+        } else {
+            createRailLayout(context, dp)
+        }.also {
+            buildLeftMenu()
+            renderRightPanelLoading()
+            loadRightPanelContent()
+        }
+    }
+
+    /** Phone portrait uses a thumb-friendly bottom navigation bar instead of the TV rail. */
+    private fun isPhonePortrait(): Boolean {
+        val configuration = resources.configuration
+        val isTv = requireContext().packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+        return !isTv &&
+            configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT &&
+            configuration.smallestScreenWidthDp < 600
+    }
+
+    private fun createPhonePortraitLayout(context: Context, dp: Float): View {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
+
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.quadtv_logo_horizontal)
+                contentDescription = "QuadTV by QuadMedia"
+                adjustViewBounds = true
+                scaleType = ImageView.ScaleType.FIT_START
+                setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (10 * dp).toInt())
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (56 * dp).toInt())
+            })
+
+            addView(ScrollView(context).apply {
+                rightContainer = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (24 * dp).toInt())
+                }
+                addView(rightContainer)
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+            })
+
+            addView(divider(context, horizontal = true))
+            addView(HorizontalScrollView(context).apply {
+                isHorizontalScrollBarEnabled = false
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
+                menuContainer = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                addView(menuContainer)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            })
+        }
+    }
+
+    private fun createRailLayout(context: Context, dp: Float): View {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             setBackgroundResource(net.trequad.quadtv.R.drawable.quadtv_neon_waves_background)
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(Color.rgb(12, 30, 50))
+                setBackgroundColor(QuadTvTheme.SURFACE_RAISED)
                 layoutParams = LinearLayout.LayoutParams((240 * dp).toInt(), LinearLayout.LayoutParams.MATCH_PARENT)
                 addView(ImageView(context).apply {
                     setImageResource(R.drawable.quadtv_logo_horizontal)
@@ -101,7 +164,7 @@ class HomeFragment : Fragment() {
                     adjustViewBounds = true
                     scaleType = ImageView.ScaleType.FIT_CENTER
                     setPadding((14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt())
-                    setBackgroundColor(Color.rgb(7, 18, 32))
+                    setBackgroundColor(QuadTvTheme.BACKGROUND)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         (88 * dp).toInt()
@@ -127,10 +190,6 @@ class HomeFragment : Fragment() {
                 addView(rightContainer)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
             })
-        }.also {
-            buildLeftMenu()
-            renderRightPanelLoading()
-            loadRightPanelContent()
         }
     }
 
@@ -141,17 +200,24 @@ class HomeFragment : Fragment() {
 
     private fun buildLeftMenu() {
         menuContainer.removeAllViews()
-        listOf(
-            HomeAction("Live TV", QuadTvRoute.LIVE_TV),
-            HomeAction("VOD", QuadTvRoute.VOD),
-            HomeAction("QuadOnDemand", QuadTvRoute.JELLYFIN),
-            HomeAction("Search", QuadTvRoute.MOVIE_SEARCH),
-            HomeAction("Refresh", refreshProviderFeeds = true),
-            HomeAction("Favorites", QuadTvRoute.FAVORITES),
-            HomeAction("Recently Viewed", QuadTvRoute.RECENTLY_VIEWED),
-            HomeAction("Seerr", QuadTvRoute.SEERR),
-            HomeAction("Settings", QuadTvRoute.SETTINGS)
-        ).forEach { action ->
+        // QuadOnDemand leads: Jellyfin is the hub, Live TV/VOD are add-on modules.
+        // Items the customer's package does not include are hidden entirely.
+        val session = customerSession
+        val canLive = session?.canAccessLiveTv ?: true
+        val canVod = session?.canAccessVod ?: true
+        val canQuad = session?.canAccessQuaddemand ?: true
+        val canSeerr = session?.canAccessSeerr ?: true
+        buildList {
+            if (canQuad) add(HomeAction("QuadOnDemand", QuadTvRoute.JELLYFIN))
+            if (canLive) add(HomeAction("Live TV", QuadTvRoute.LIVE_TV))
+            if (canVod) add(HomeAction("VOD", QuadTvRoute.VOD))
+            if (canVod || canQuad) add(HomeAction("Search", QuadTvRoute.MOVIE_SEARCH))
+            if (canSeerr) add(HomeAction("Requests", QuadTvRoute.SEERR))
+            add(HomeAction("Favorites", QuadTvRoute.FAVORITES))
+            add(HomeAction("Recently Viewed", QuadTvRoute.RECENTLY_VIEWED))
+            add(HomeAction("Refresh", refreshProviderFeeds = true))
+            add(HomeAction("Settings", QuadTvRoute.SETTINGS))
+        }.forEach { action ->
             menuContainer.addView(menuButton(action))
         }
     }
@@ -164,7 +230,7 @@ class HomeFragment : Fragment() {
             isFocusable = true
             isFocusableInTouchMode = true
             setPadding((18 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
-            setBackgroundColor(Color.rgb(10, 24, 38))
+            setBackgroundColor(QuadTvTheme.SURFACE)
             addView(ImageView(context).apply {
                 setImageResource(quickAccessIconFor(action))
                 scaleType = ImageView.ScaleType.FIT_CENTER
@@ -182,7 +248,7 @@ class HomeFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
                 if (hasFocus && ::menuScrollView.isInitialized) {
                     menuScrollView.post { menuScrollView.smoothScrollTo(0, view.bottom) }
                 }
@@ -199,6 +265,7 @@ class HomeFragment : Fragment() {
         "Refresh" -> net.trequad.quadtv.R.drawable.quick_access_icon_refresh
         "Favorites" -> net.trequad.quadtv.R.drawable.quick_access_icon_favorites
         "Recently Viewed" -> net.trequad.quadtv.R.drawable.quick_access_icon_recently_viewed
+        "Requests" -> net.trequad.quadtv.R.drawable.quick_access_icon_search
         "Settings" -> net.trequad.quadtv.R.drawable.quick_access_icon_settings
         else -> net.trequad.quadtv.R.drawable.quick_access_icon_jellyfin
     }
@@ -206,7 +273,6 @@ class HomeFragment : Fragment() {
     private fun handleHomeAction(action: HomeAction) {
         when {
             action.refreshProviderFeeds -> showProviderFeedRefreshDialog()
-            action.opensSeerrPlaceholder -> showSeerrPlaceholder()
             action.mediaItem != null -> openMediaDetails(action.mediaItem)
             action.playbackRequest != null -> (activity as? QuadTvNavigator)?.navigateToPlayer(action.playbackRequest)
             action.route != null -> (activity as? QuadTvNavigator)?.navigateTo(action.route)
@@ -224,10 +290,15 @@ class HomeFragment : Fragment() {
         val epgRepo = epgRepository
         val vodRepo = vodRepository
         val quadRepo = jellyfinRepository
+        val session = customerSession
+        val canLive = session?.canAccessLiveTv ?: true
+        val canVod = session?.canAccessVod ?: true
+        val canQuad = session?.canAccessQuaddemand ?: true
         lifecycleScope.launch {
-            val recentChannels = bookmarkStore.recentChannels().take(8)
+            val recentChannels = if (canLive) bookmarkStore.recentChannels().take(8) else emptyList()
             val recentMovies = mediaStore.recentItems().filterNot { it.isSeries }.take(10)
             val liveNow = async(Dispatchers.IO) {
+                if (!canLive) return@async emptyList()
                 runCatching {
                     val channels = liveRepo.loadChannels()
                     val programmes = runCatching { epgRepo.loadProgrammes() }.getOrDefault(emptyList())
@@ -250,11 +321,30 @@ class HomeFragment : Fragment() {
                     }
                 }.getOrDefault(emptyList())
             }
-            val vodMovies = async(Dispatchers.IO) { runCatching { vodRepo.loadRecentlyAddedPage(limit = 5).items }.getOrDefault(emptyList()) }
-            val quadMovies = async(Dispatchers.IO) { runCatching { quadRepo.loadRecentlyReleasedMoviesPage(limit = 5).items }.getOrDefault(emptyList()) }
-            val quadShows = async(Dispatchers.IO) { runCatching { quadRepo.loadRecentlyReleasedSeriesPage(limit = 5).items }.getOrDefault(emptyList()) }
+            val continueWatching = async(Dispatchers.IO) {
+                if (!canQuad) return@async emptyList()
+                runCatching { quadRepo.loadContinueWatching(limit = 8) }.getOrDefault(emptyList())
+            }
+            val quadRecentlyAdded = async(Dispatchers.IO) {
+                if (!canQuad) return@async emptyList()
+                runCatching { quadRepo.loadRecentlyAddedPage(limit = 8).items }.getOrDefault(emptyList())
+            }
+            val vodMovies = async(Dispatchers.IO) {
+                if (!canVod) return@async emptyList()
+                runCatching { vodRepo.loadRecentlyAddedPage(limit = 5).items }.getOrDefault(emptyList())
+            }
+            val quadMovies = async(Dispatchers.IO) {
+                if (!canQuad) return@async emptyList()
+                runCatching { quadRepo.loadRecentlyReleasedMoviesPage(limit = 5).items }.getOrDefault(emptyList())
+            }
+            val quadShows = async(Dispatchers.IO) {
+                if (!canQuad) return@async emptyList()
+                runCatching { quadRepo.loadRecentlyReleasedSeriesPage(limit = 5).items }.getOrDefault(emptyList())
+            }
 
             renderRightPanel(
+                continueWatching = continueWatching.await(),
+                quadRecentlyAdded = quadRecentlyAdded.await(),
                 liveNow = liveNow.await(),
                 recentChannels = recentChannels,
                 recentMovies = recentMovies,
@@ -266,6 +356,8 @@ class HomeFragment : Fragment() {
     }
 
     private fun renderRightPanel(
+        continueWatching: List<JellyfinItem>,
+        quadRecentlyAdded: List<JellyfinItem>,
         liveNow: List<HomeMediaTile>,
         recentChannels: List<BookmarkedLiveChannel>,
         recentMovies: List<BookmarkedMediaItem>,
@@ -273,29 +365,86 @@ class HomeFragment : Fragment() {
         quadMovies: List<JellyfinItem>,
         quadShows: List<JellyfinItem>
     ) {
+        val session = customerSession
+        val canLive = session?.canAccessLiveTv ?: true
+        val canVod = session?.canAccessVod ?: true
+        val canQuad = session?.canAccessQuaddemand ?: true
+        val canSeerr = session?.canAccessSeerr ?: true
+
         rightContainer.removeAllViews()
-        rightContainer.addView(header("Featured"))
-        addTileRow("Recently Watched Channels", recentChannels.map { channel ->
-            HomeMediaTile(
-                title = channel.name,
-                imageUrl = channel.logoUrl,
-                playbackRequest = channel.toPlaybackRequest(),
-                isLogoTile = true
-            )
-        }, emptyMessage = "No recently watched channels yet.")
-        addTileRow("Live Now", liveNow, emptyMessage = "No current guide matches yet — open Live TV to browse all channels.")
+        rightContainer.addView(header("Home"))
+
+        // QuadOnDemand is the hub: its rows lead, live/VOD rows follow as add-ons.
+        if (canQuad) {
+            if (continueWatching.isNotEmpty()) {
+                addTileRow("Continue Watching", continueWatching.map { item ->
+                    HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark(isSeries = false))
+                }, emptyMessage = "")
+            }
+            addTileRow("Recently Added on QuadOnDemand", quadRecentlyAdded.take(8).map { item ->
+                HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark(isSeries = false))
+            }, emptyMessage = "New titles will appear here as they are added.")
+            addTileRow("Recently Released QuadOnDemand Movies", quadMovies.take(5).map { item ->
+                HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark(isSeries = false))
+            }, emptyMessage = "QuadOnDemand movies will appear here when available.")
+            addTileRow("Recently Released TV Shows", quadShows.take(5).map { item ->
+                HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark(isSeries = true))
+            }, emptyMessage = "QuadOnDemand shows will appear here when available.")
+        }
         addTileRow("Recently Watched Movies", recentMovies.map { item ->
             HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item)
         }, emptyMessage = "No recently watched movies yet.")
-        addTileRow("Recently Added VOD", vodMovies.take(5).map { item ->
-            HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark())
-        }, emptyMessage = "VOD posters will appear here after the playlist refreshes.")
-        addTileRow("Recently Released QuadOnDemand Movies", quadMovies.take(5).map { item ->
-            HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark(isSeries = false))
-        }, emptyMessage = "QuadOnDemand movies will appear here when available.")
-        addTileRow("Recently Released TV Shows", quadShows.take(5).map { item ->
-            HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark(isSeries = true))
-        }, emptyMessage = "QuadOnDemand shows will appear here when available.")
+        if (canLive) {
+            addTileRow("Live Now", liveNow, emptyMessage = "No current guide matches yet — open Live TV to browse all channels.")
+            addTileRow("Recently Watched Channels", recentChannels.map { channel ->
+                HomeMediaTile(
+                    title = channel.name,
+                    imageUrl = channel.logoUrl,
+                    playbackRequest = channel.toPlaybackRequest(),
+                    isLogoTile = true
+                )
+            }, emptyMessage = "No recently watched channels yet.")
+        }
+        if (canVod) {
+            addTileRow("Recently Added VOD", vodMovies.take(5).map { item ->
+                HomeMediaTile(title = item.title, imageUrl = item.posterUrl, mediaItem = item.toMediaBookmark())
+            }, emptyMessage = "VOD posters will appear here after the playlist refreshes.")
+        }
+        if (canSeerr) {
+            rightContainer.addView(requestSomethingCard())
+        }
+    }
+
+    /** Wide "Request movies & shows" card — approved requests land in QuadOnDemand. */
+    private fun requestSomethingCard(): View {
+        val dp = requireContext().resources.displayMetrics.density
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setBackgroundColor(QuadTvTheme.SURFACE)
+            setPadding((18 * dp).toInt(), (16 * dp).toInt(), (18 * dp).toInt(), (16 * dp).toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = (18 * dp).toInt() }
+            addView(TextView(context).apply {
+                text = "+ Request movies & shows"
+                textSize = 19f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+            })
+            addView(TextView(context).apply {
+                text = "Approved requests appear in QuadOnDemand."
+                textSize = 14f
+                setTextColor(Color.LTGRAY)
+                setPadding(0, (4 * dp).toInt(), 0, 0)
+            })
+            setOnFocusChangeListener { view, hasFocus ->
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
+            }
+            setOnClickListener { (activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.SEERR) }
+        }
     }
 
     private fun addTileRow(title: String, tiles: List<HomeMediaTile>, emptyMessage: String) {
@@ -322,16 +471,16 @@ class HomeFragment : Fragment() {
             isFocusable = true
             isFocusableInTouchMode = true
             setPadding((8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt(), (10 * dp).toInt())
-            setBackgroundColor(Color.rgb(10, 24, 38))
+            setBackgroundColor(QuadTvTheme.SURFACE)
             layoutParams = LinearLayout.LayoutParams(cardWidth + (16 * dp).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 rightMargin = (14 * dp).toInt()
             }
             setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
             }
             val image = ImageView(context).apply {
                 scaleType = if (tile.isLogoTile) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
-                setBackgroundColor(Color.rgb(7, 18, 32))
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
                 layoutParams = LinearLayout.LayoutParams(cardWidth, imageHeight)
             }
             addView(image)
@@ -342,7 +491,7 @@ class HomeFragment : Fragment() {
                 addView(TextView(context).apply {
                     text = tile.title.firstOrNull()?.uppercase() ?: "?"
                     textSize = 28f
-                    setTextColor(Color.rgb(126, 203, 255))
+                    setTextColor(QuadTvTheme.ACCENT)
                     gravity = Gravity.CENTER
                     setTypeface(null, Typeface.BOLD)
                     layoutParams = LinearLayout.LayoutParams(cardWidth, imageHeight)
@@ -405,14 +554,6 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun showSeerrPlaceholder() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Seerr")
-            .setMessage("Requester app/web page slot reserved. We'll wire Overseerr/Jellyseerr-style requests here later once the backend choice is locked in.")
-            .setPositiveButton("Close", null)
-            .show()
-    }
-
     private fun openMediaDetails(item: BookmarkedMediaItem) {
         val fragment = when (item.source) {
             BookmarkedMediaSource.VOD -> VodDetailsFragment.newInstance(item.toVodItem())
@@ -471,7 +612,7 @@ class HomeFragment : Fragment() {
         text = label
         textSize = 19f
         setTypeface(null, Typeface.BOLD)
-        setTextColor(Color.rgb(126, 203, 255))
+        setTextColor(QuadTvTheme.ACCENT)
         setPadding(0, 18, 0, 8)
     }
 
@@ -483,7 +624,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun divider(context: Context, horizontal: Boolean): View = View(context).apply {
-        setBackgroundColor(Color.rgb(25, 52, 72))
+        setBackgroundColor(QuadTvTheme.LINE)
         layoutParams = if (horizontal) {
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
         } else {
@@ -491,60 +632,21 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun buildProviderFeedRefreshCoordinator(): ProviderFeedRefreshCoordinator {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return ProviderFeedRefreshCoordinator(
-            liveTvRepository = LiveTvRepository(providerFeedRepository, okHttpClient),
-            epgRepository = EpgRepository(providerFeedRepository, okHttpClient)
+    private fun buildProviderFeedRefreshCoordinator(): ProviderFeedRefreshCoordinator =
+        ProviderFeedRefreshCoordinator(
+            liveTvRepository = AppServices.liveTvRepository(requireContext()),
+            epgRepository = AppServices.epgRepository(requireContext())
         )
-    }
 
-    private fun buildLiveTvRepository(): LiveTvRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return LiveTvRepository(providerFeedRepository, okHttpClient)
-    }
+    private fun buildLiveTvRepository(): LiveTvRepository =
+        AppServices.liveTvRepository(requireContext())
 
-    private fun buildEpgRepository(): EpgRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return EpgRepository(providerFeedRepository, okHttpClient)
-    }
+    private fun buildEpgRepository(): EpgRepository =
+        AppServices.epgRepository(requireContext())
 
-    private fun buildVodRepository(): VodRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val launchPrefs = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = net.trequad.quadtv.adminapi.AdminConfigRepository(apiService, LaunchConfigCache(launchPrefs))
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return VodRepository(configRepository, okHttpClient, moshi, providerFeedRepository)
-    }
+    private fun buildVodRepository(): VodRepository =
+        AppServices.vodRepository(requireContext())
 
-    private fun buildJellyfinRepository(): JellyfinRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val launchPrefs = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = net.trequad.quadtv.adminapi.AdminConfigRepository(apiService, LaunchConfigCache(launchPrefs))
-        return JellyfinRepository(configRepository, okHttpClient, moshi)
-    }
+    private fun buildJellyfinRepository(): JellyfinRepository =
+        AppServices.jellyfinRepository(requireContext())
 }

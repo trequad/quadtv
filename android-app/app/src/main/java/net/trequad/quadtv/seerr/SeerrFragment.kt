@@ -1,5 +1,7 @@
 package net.trequad.quadtv.seerr
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -19,15 +21,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
-import net.trequad.quadtv.core.config.QuadTvConfig
+import net.trequad.quadtv.core.AppServices
+import net.trequad.quadtv.adminapi.AdminApiService
+import net.trequad.quadtv.core.cache.CustomerSessionCache
+import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.navigation.QuadTvNavigator
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 
 class SeerrFragment : Fragment() {
     private lateinit var webView: WebView
+    private lateinit var statusView: TextView
+    private val sessionRepository: SeerrSessionRepository by lazy { buildSeerrSessionRepository() }
 
     override fun onCreateView(
         inflater: android.view.LayoutInflater,
@@ -44,7 +47,7 @@ class SeerrFragment : Fragment() {
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setBackgroundColor(Color.rgb(7, 18, 32))
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
                 setPadding((18 * dp).toInt(), (12 * dp).toInt(), (18 * dp).toInt(), (12 * dp).toInt())
 
                 addView(ImageView(context).apply {
@@ -56,7 +59,7 @@ class SeerrFragment : Fragment() {
                 })
 
                 addView(TextView(context).apply {
-                    text = "Request"
+                    text = "Requests"
                     textSize = 20f
                     setTypeface(null, Typeface.BOLD)
                     setTextColor(Color.WHITE)
@@ -67,23 +70,32 @@ class SeerrFragment : Fragment() {
                     text = "Back"
                     textSize = 17f
                     setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.rgb(126, 203, 255))
+                    setTextColor(QuadTvTheme.ACCENT)
                     gravity = Gravity.CENTER
                     isFocusable = true
                     isFocusableInTouchMode = true
                     setPadding((18 * dp).toInt(), (10 * dp).toInt(), (18 * dp).toInt(), (10 * dp).toInt())
-                    setBackgroundColor(Color.rgb(10, 24, 38))
+                    setBackgroundColor(QuadTvTheme.SURFACE)
                     setOnFocusChangeListener { view, hasFocus ->
-                        view.setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+                        view.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
                     }
                     setOnClickListener { handleBack() }
                 })
             })
 
+            statusView = TextView(context).apply {
+                text = "Loading Requests — approved requests appear in QuadOnDemand…"
+                textSize = 17f
+                setTextColor(Color.LTGRAY)
+                gravity = Gravity.CENTER
+                setPadding((24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt())
+            }
+            addView(statusView)
+
             webView = WebView(context).apply {
                 isFocusable = true
                 isFocusableInTouchMode = true
-                setBackgroundColor(Color.rgb(7, 24, 39))
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
                 webViewClient = WebViewClient()
                 settings.apply {
                     javaScriptEnabled = true
@@ -115,38 +127,21 @@ class SeerrFragment : Fragment() {
 
     private fun authenticateAndLoad() {
         lifecycleScope.launch {
-            val cookie = withContext(Dispatchers.IO) { fetchSeerrSessionCookie() }
-            if (cookie != null) {
-                val cookieManager = CookieManager.getInstance()
-                cookieManager.setAcceptCookie(true)
-                cookieManager.setCookie(QuadTvConfig.SEERR_BASE_URL, cookie)
-                cookieManager.flush()
+            // The portal issues the Requests session; no credentials live in the app.
+            val session = withContext(Dispatchers.IO) { sessionRepository.createSession() }
+            if (!isAdded || !::webView.isInitialized) return@launch
+            if (session == null) {
+                statusView.text =
+                    "Requests are temporarily unavailable. Please try again later or contact QuadTV support."
+                return@launch
             }
-            if (::webView.isInitialized) {
-                webView.loadUrl(QuadTvConfig.SEERR_BASE_URL)
-                webView.requestFocus()
-            }
-        }
-    }
-
-    private fun fetchSeerrSessionCookie(): String? {
-        return try {
-            val client = OkHttpClient.Builder()
-                .followRedirects(false)
-                .build()
-            val body = """{"email":"${QuadTvConfig.SEERR_ADMIN_EMAIL}","password":"${QuadTvConfig.SEERR_ADMIN_PASSWORD}"}"""
-                .toRequestBody("application/json".toMediaType())
-            val request = Request.Builder()
-                .url("${QuadTvConfig.SEERR_BASE_URL}/api/v1/auth/local")
-                .post(body)
-                .build()
-            client.newCall(request).execute().use { response ->
-                response.headers("Set-Cookie")
-                    .firstOrNull { it.startsWith("connect.sid=") }
-                    ?.substringBefore(";")
-            }
-        } catch (_: Exception) {
-            null
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
+            cookieManager.setCookie(session.baseUrl, session.sessionCookie)
+            cookieManager.flush()
+            statusView.visibility = View.GONE
+            webView.loadUrl(session.baseUrl)
+            webView.requestFocus()
         }
     }
 
@@ -165,4 +160,7 @@ class SeerrFragment : Fragment() {
             (activity as? QuadTvNavigator)?.goBack()
         }
     }
+
+    private fun buildSeerrSessionRepository(): SeerrSessionRepository =
+        AppServices.seerrSessionRepository(requireContext())
 }

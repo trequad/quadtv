@@ -64,11 +64,13 @@ def test_seerr_fragment_embeds_request_portal_webview():
     assert "WebViewClient" in source
     assert "javaScriptEnabled = true" in source
     assert "domStorageEnabled = true" in source
-    assert "QuadTvConfig.SEERR_BASE_URL" in source
+    # Requests sessions come from the portal; no Seerr URL/credentials in the APK.
+    assert "SeerrSessionRepository" in source
     assert "R.drawable.quadtv_logo_horizontal" in source
     assert "Request" in source
     assert "goBack()" in source
-    assert "const val SEERR_BASE_URL = \"http://10.34.1.194:5055\"" in config
+    assert "SEERR_BASE_URL" not in config
+    assert "SEERR_ADMIN" not in config
 
 
 def test_live_tv_fragment_exists_as_navigation_target():

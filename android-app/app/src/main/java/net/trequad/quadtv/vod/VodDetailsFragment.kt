@@ -1,5 +1,6 @@
 package net.trequad.quadtv.vod
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -20,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.adminapi.AdminConfigRepository
 import net.trequad.quadtv.core.cache.CustomerSessionCache
@@ -111,7 +113,7 @@ class VodDetailsFragment : Fragment() {
                             text = "Seasons & Episodes"
                             textSize = 24f
                             setTypeface(null, Typeface.BOLD)
-                            setTextColor(Color.rgb(66, 165, 245))
+                            setTextColor(QuadTvTheme.ACCENT)
                             setPadding(0, 0, 0, 16)
                         })
                         showSeriesSeasons(this, item)
@@ -267,18 +269,8 @@ class VodDetailsFragment : Fragment() {
         isSeries = isSeries, isMature = isMature
     )
 
-    private fun buildVodRepository(): VodRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val prefs = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val sessionPrefs = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(prefs))
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPrefs))
-        return VodRepository(configRepository, okHttpClient, moshi, providerFeedRepository)
-    }
+    private fun buildVodRepository(): VodRepository =
+        AppServices.vodRepository(requireContext())
 
     companion object {
         private const val ARG_ID = "vod_id"

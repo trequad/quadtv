@@ -12,7 +12,10 @@ data class CachedCustomerSession(
     val canAccessLiveTv: Boolean,
     val canAccessVod: Boolean,
     val canAccessQuaddemand: Boolean,
-    val canAccessSeerr: Boolean
+    val canAccessSeerr: Boolean,
+    val jellyfinBaseUrl: String? = null,
+    val jellyfinUserId: String? = null,
+    val jellyfinAccessToken: String? = null
 )
 
 class CustomerSessionCache(
@@ -29,6 +32,9 @@ class CustomerSessionCache(
             .putBoolean(KEY_CAN_ACCESS_VOD, response.canAccessVod)
             .putBoolean(KEY_CAN_ACCESS_QUADDEMAND, response.canAccessQuaddemand)
             .putBoolean(KEY_CAN_ACCESS_SEERR, response.canAccessSeerr)
+            .putString(KEY_JELLYFIN_BASE_URL, response.jellyfinBaseUrl)
+            .putString(KEY_JELLYFIN_USER_ID, response.jellyfinUserId)
+            .putString(KEY_JELLYFIN_ACCESS_TOKEN, response.jellyfinAccessToken)
             .apply()
     }
 
@@ -46,7 +52,10 @@ class CustomerSessionCache(
             canAccessLiveTv = sharedPreferences.getBoolean(KEY_CAN_ACCESS_LIVE_TV, true),
             canAccessVod = sharedPreferences.getBoolean(KEY_CAN_ACCESS_VOD, true),
             canAccessQuaddemand = sharedPreferences.getBoolean(KEY_CAN_ACCESS_QUADDEMAND, true),
-            canAccessSeerr = sharedPreferences.getBoolean(KEY_CAN_ACCESS_SEERR, true)
+            canAccessSeerr = sharedPreferences.getBoolean(KEY_CAN_ACCESS_SEERR, true),
+            jellyfinBaseUrl = sharedPreferences.getString(KEY_JELLYFIN_BASE_URL, null),
+            jellyfinUserId = sharedPreferences.getString(KEY_JELLYFIN_USER_ID, null),
+            jellyfinAccessToken = sharedPreferences.getString(KEY_JELLYFIN_ACCESS_TOKEN, null)
         )
     }
 
@@ -65,6 +74,9 @@ class CustomerSessionCache(
         private const val KEY_CAN_ACCESS_VOD = "can_access_vod"
         private const val KEY_CAN_ACCESS_QUADDEMAND = "can_access_quaddemand"
         private const val KEY_CAN_ACCESS_SEERR = "can_access_seerr"
+        private const val KEY_JELLYFIN_BASE_URL = "jellyfin_base_url"
+        private const val KEY_JELLYFIN_USER_ID = "jellyfin_user_id"
+        private const val KEY_JELLYFIN_ACCESS_TOKEN = "jellyfin_access_token"
         private const val MISSING_USER_ID = -1
     }
 }

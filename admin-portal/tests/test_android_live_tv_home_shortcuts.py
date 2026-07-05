@@ -54,7 +54,9 @@ def test_live_tv_and_player_can_bookmark_and_record_recent_channels():
     assert "bookmarkStore.recordRecent(channel, programme?.title)" in live
     assert "setOnLongClickListener" in live
     assert "bookmarkStore.toggleFavorite(channel, programme?.title)" in live
-    assert "controlButton(\"Favorite\")" in player
+    # Favorite is an icon button since the 2026-07-04 icon-controls pass.
+    assert "btn_star_big_off" in player
+    assert "toggleCurrentFavorite()" in player
     assert "toggleCurrentFavorite" in player
     assert "recordRecentLiveChannel(playableRequest)" in player
     assert "LiveChannelBookmarkStore(requireContext().applicationContext).recordRecent" in player

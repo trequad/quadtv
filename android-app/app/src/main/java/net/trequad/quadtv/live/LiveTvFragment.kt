@@ -1,5 +1,6 @@
 package net.trequad.quadtv.live
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -16,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.core.cache.CustomerSessionCache
 import net.trequad.quadtv.core.cache.ProfileSelectionCache
@@ -73,15 +75,15 @@ class LiveTvFragment : Fragment() {
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(Color.rgb(12, 30, 50))
+                setBackgroundColor(QuadTvTheme.SURFACE_RAISED)
                 layoutParams = LinearLayout.LayoutParams(navWidth, LinearLayout.LayoutParams.MATCH_PARENT)
                 addView(TextView(context).apply {
                     text = "Live TV"
                     textSize = 20f
                     setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.rgb(66, 165, 245))
+                    setTextColor(QuadTvTheme.ACCENT)
                     setPadding((16 * dp).toInt(), (20 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt())
-                    setBackgroundColor(Color.rgb(7, 18, 32))
+                    setBackgroundColor(QuadTvTheme.BACKGROUND)
                 })
                 addView(divider(context, horizontal = true))
                 groupContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -101,7 +103,7 @@ class LiveTvFragment : Fragment() {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding((20 * dp).toInt(), (16 * dp).toInt(), (20 * dp).toInt(), (8 * dp).toInt())
-                    setBackgroundColor(Color.rgb(7, 18, 32))
+                    setBackgroundColor(QuadTvTheme.BACKGROUND)
                     contentHeader = TextView(context).apply {
                         text = ALL_CHANNELS_GROUP
                         textSize = 22f
@@ -113,7 +115,7 @@ class LiveTvFragment : Fragment() {
                     addView(TextView(context).apply {
                         text = "Open Guide"
                         textSize = 16f
-                        setTextColor(Color.rgb(66, 165, 245))
+                        setTextColor(QuadTvTheme.ACCENT)
                         isFocusable = true
                         isFocusableInTouchMode = true
                         setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), 0)
@@ -142,7 +144,6 @@ class LiveTvFragment : Fragment() {
 
     private fun loadChannelsFromRepository() {
         val liveRepo = liveTvRepository   // initialise on main thread
-        val epgRepo = epgRepository
         lifecycleScope.launch {
             val channels = try {
                 withContext(Dispatchers.IO) { liveRepo.loadChannels() }
@@ -162,7 +163,7 @@ class LiveTvFragment : Fragment() {
                     sortedGroupNames(grouped.keys).associateWith { group -> grouped[group].orEmpty() }
                 selectedGroup = FAVORITES_GROUP
                 renderGroupsAndChannels(selectedGroup ?: channelsByGroup.keys.first())
-                loadCurrentProgrammesIntoRows(visibleChannels, epgRepo)
+                startEpgLoading()
             } catch (_: Throwable) {
                 showErrorState()
             }
@@ -178,6 +179,13 @@ class LiveTvFragment : Fragment() {
             context.getSharedPreferences(ParentalSettingsCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
         ).isEnabledForProfile(profileId)
         return ProfileParentalState(profileId = profileId, parentalEnabled = enabled)
+    }
+
+    private fun startEpgLoading() {
+        val channels = channelsByGroup[ALL_CHANNELS_GROUP].orEmpty()
+        if (channels.isEmpty()) return
+        val epgRepo = epgRepository
+        loadCurrentProgrammesIntoRows(channels, epgRepo)
     }
 
     private fun loadCurrentProgrammesIntoRows(channels: List<LiveChannel>, epgRepo: EpgRepository) {
@@ -255,11 +263,11 @@ class LiveTvFragment : Fragment() {
             isFocusable = true
             isFocusableInTouchMode = true
             setTextColor(Color.WHITE)
-            setBackgroundColor(if (selected) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+            setBackgroundColor(if (selected) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
             setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
             setOnFocusChangeListener { _, hasFocus ->
                 setBackgroundColor(
-                    if (hasFocus || selected) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38)
+                    if (hasFocus || selected) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE
                 )
             }
             setOnClickListener { onClick() }
@@ -277,7 +285,7 @@ class LiveTvFragment : Fragment() {
             setBackgroundColor(Color.rgb(18, 38, 56))
 
             setOnFocusChangeListener { _, hasFocus ->
-                setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(18, 38, 56))
+                setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else Color.rgb(18, 38, 56))
                 (getChildAt(1) as? LinearLayout)
                     ?.let { (it.getChildAt(0) as? TextView)?.textSize = if (hasFocus) 22f else 20f }
             }
@@ -347,13 +355,13 @@ class LiveTvFragment : Fragment() {
         text = label
         textSize = 13f
         setTypeface(null, Typeface.BOLD)
-        setTextColor(Color.rgb(126, 203, 255))
+        setTextColor(QuadTvTheme.ACCENT)
         setPadding(16, 16, 16, 8)
     }
 
     private fun divider(context: Context, horizontal: Boolean): View {
         return View(context).apply {
-            setBackgroundColor(Color.rgb(25, 52, 72))
+            setBackgroundColor(QuadTvTheme.LINE)
             layoutParams = if (horizontal) {
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
             } else {
@@ -362,25 +370,11 @@ class LiveTvFragment : Fragment() {
         }
     }
 
-    private fun buildLiveTvRepository(): LiveTvRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return LiveTvRepository(providerFeedRepository, okHttpClient)
-    }
+    private fun buildLiveTvRepository(): LiveTvRepository =
+        AppServices.liveTvRepository(requireContext())
 
-    private fun buildEpgRepository(): EpgRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return EpgRepository(providerFeedRepository, okHttpClient)
-    }
+    private fun buildEpgRepository(): EpgRepository =
+        AppServices.epgRepository(requireContext())
 }
 
 private fun sortedGroupNames(groups: Set<String>): List<String> {

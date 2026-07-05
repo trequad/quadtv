@@ -19,7 +19,7 @@
             android:banner="@drawable/quadtv_icon"
             android:exported="true"
             android:label="QuadTV"
-            android:screenOrientation="landscape">
+            android:screenOrientation="fullUser">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

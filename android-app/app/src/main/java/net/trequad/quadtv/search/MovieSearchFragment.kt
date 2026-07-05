@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.adminapi.AdminConfigRepository
 import net.trequad.quadtv.core.cache.LaunchConfigCache
@@ -164,26 +165,9 @@ class MovieSearchFragment : Fragment() {
         }
     }
 
-    private fun buildVodRepository(): VodRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val preferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(preferences))
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return VodRepository(configRepository, okHttpClient, moshi, providerFeedRepository)
-    }
+    private fun buildVodRepository(): VodRepository =
+        AppServices.vodRepository(requireContext())
 
-    private fun buildJellyfinRepository(): JellyfinRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val preferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        return JellyfinRepository(AdminConfigRepository(apiService, LaunchConfigCache(preferences)), okHttpClient, moshi)
-    }
+    private fun buildJellyfinRepository(): JellyfinRepository =
+        AppServices.jellyfinRepository(requireContext())
 }

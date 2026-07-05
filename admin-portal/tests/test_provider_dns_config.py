@@ -36,7 +36,7 @@ def test_app_config_exposes_editable_provider_dns_base_urls(tmp_path, monkeypatc
     default_response = client.get("/api/v1/app/config")
     assert default_response.status_code == 200
     body = default_response.json()
-    assert body["live_tv_provider_base_url"] == "http://by.questreams.com:83"
+    assert body["live_tv_provider_base_url"] == "http://ahhshitherewegoagain.sytes.net/"
     assert body["vod_provider_base_url"] == "https://livinitup.online"
     assert body["provider_feed_refresh_hours"] == 24
     assert "live_tv_endpoint" not in body
@@ -67,4 +67,27 @@ def test_app_config_exposes_editable_provider_dns_base_urls(tmp_path, monkeypatc
     get_response = restarted_client.get("/api/v1/app/config")
 
     assert get_response.status_code == 200
-    assert get_response.json() == payload
+    body = get_response.json()
+    # Secrets are write-only: never echoed back, only reported as set.
+    assert body["jellyfin_api_key"] is None
+    assert body["jellyfin_api_key_set"] is True
+    assert "jellyfin-secret" not in get_response.text
+    expected = {key: value for key, value in payload.items() if key != "jellyfin_api_key"}
+    for key, value in expected.items():
+        assert body[key] == value
+
+
+def test_static_dashboard_saves_current_provider_base_url_fields():
+    html = (PROJECT_ROOT / "web" / "index.html").read_text()
+    js = (PROJECT_ROOT / "web" / "app.js").read_text()
+
+    assert "Live TV provider base URL" in html
+    assert "VOD provider base URL" in html
+    assert 'id="config-xmltv"' not in html
+    assert "config.live_tv_provider_base_url" in js
+    assert "config.vod_provider_base_url" in js
+    assert "live_tv_provider_base_url: $('config-live').value" in js
+    assert "vod_provider_base_url: $('config-vod').value" in js
+    assert "live_tv_endpoint" not in js
+    assert "xmltv_endpoint" not in js
+    assert "vod_endpoint" not in js

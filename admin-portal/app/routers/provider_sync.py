@@ -13,6 +13,56 @@ router = APIRouter(prefix="/provider-sync", tags=["Provider Sync"])
 PROVIDER_TYPES = SUPPORTED_PROVIDER_TYPES
 
 
+def upsert_provider_accounts(
+    db: Session,
+    user_id: int,
+    provider_username: str,
+    provider_password: str,
+    provider_types: list[str] | None = None,
+) -> list[ProviderAccountModel]:
+    """Create or re-link provider accounts for a user. Caller commits.
+
+    Raises HTTPException 409 if the provider username is already linked to
+    a different local user.
+    """
+    password_hash = hash_provider_password(provider_password)
+    password_secret = encrypt_provider_secret(provider_password)
+    now = datetime.now(timezone.utc)
+    accounts: list[ProviderAccountModel] = []
+    for provider_type in provider_types or list(PROVIDER_TYPES):
+        account = (
+            db.query(ProviderAccountModel)
+            .filter(
+                ProviderAccountModel.provider_type == provider_type,
+                ProviderAccountModel.provider_username == provider_username,
+            )
+            .one_or_none()
+        )
+        if account is not None and account.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{provider_type} provider username already linked to another user",
+            )
+        if account is None:
+            account = ProviderAccountModel(
+                user_id=user_id,
+                provider_type=provider_type,
+                provider_username=provider_username,
+                password_hash=password_hash,
+                provider_password_secret=password_secret,
+            )
+        else:
+            account.user_id = user_id
+            account.password_hash = password_hash
+            account.provider_password_secret = password_secret
+        account.sync_status = "manual_imported"
+        account.last_synced_at = now
+        account.last_error = None
+        db.add(account)
+        accounts.append(account)
+    return accounts
+
+
 def _get_user_or_404(user_id: int, db: Session) -> UserModel:
     user = db.get(UserModel, user_id)
     if user is None:
@@ -72,45 +122,10 @@ def manual_import_provider_credentials(
     if not request.provider_password:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Provider password is required")
 
-    password_hash = hash_provider_password(request.provider_password)
-    password_secret = encrypt_provider_secret(request.provider_password)
-    now = datetime.now(timezone.utc)
     selected_provider_types = [request.provider_type] if request.provider_type else list(PROVIDER_TYPES)
     if any(provider_type not in PROVIDER_TYPES for provider_type in selected_provider_types):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported provider type")
-    accounts = []
-    for provider_type in selected_provider_types:
-        account = (
-            db.query(ProviderAccountModel)
-            .filter(
-                ProviderAccountModel.provider_type == provider_type,
-                ProviderAccountModel.provider_username == provider_username,
-            )
-            .one_or_none()
-        )
-        if account is not None and account.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"{provider_type} provider username already linked to another user",
-            )
-        if account is None:
-            account = ProviderAccountModel(
-                user_id=user_id,
-                provider_type=provider_type,
-                provider_username=provider_username,
-                password_hash=password_hash,
-                provider_password_secret=password_secret,
-            )
-        else:
-            account.user_id = user_id
-            account.password_hash = password_hash
-            account.provider_password_secret = password_secret
-        account.sync_status = "manual_imported"
-        account.last_synced_at = now
-        account.last_error = None
-        db.add(account)
-        accounts.append(account)
-
+    upsert_provider_accounts(db, user_id, provider_username, request.provider_password, selected_provider_types)
     db.commit()
     all_accounts = db.query(ProviderAccountModel).filter(ProviderAccountModel.user_id == user_id).all()
     return _serialize(all_accounts, user_id=user_id, provider_username=provider_username)

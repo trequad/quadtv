@@ -73,6 +73,27 @@ def test_admin_can_create_live_tv_only_user_with_pin_and_login_returns_entitleme
     assert body["can_access_seerr"] is False
 
 
+def test_customer_login_accepts_case_insensitive_username_and_trims_pin_for_tv_keyboards(tmp_path, monkeypatch):
+    client = build_client(tmp_path, monkeypatch)
+    headers = admin_headers(client)
+    response = client.post(
+        "/api/v1/users",
+        json={"display_name": "Bobjack", "app_username": "bobjack", "app_pin": "3434"},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    login = client.post(
+        "/api/v1/auth/customer-login",
+        json={"username": "Bobjack", "password": "3434 "},
+    )
+
+    assert login.status_code == 200
+    body = login.json()
+    assert body["provider_username"] == "bobjack"
+    assert body["expired"] is False
+
+
 def test_customer_login_rejects_wrong_pin_for_pin_user(tmp_path, monkeypatch):
     client = build_client(tmp_path, monkeypatch)
     headers = admin_headers(client)

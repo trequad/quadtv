@@ -1,5 +1,6 @@
 package net.trequad.quadtv.settings
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
@@ -20,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.core.cache.CustomerSessionCache
 import net.trequad.quadtv.core.cache.ProfileSelectionCache
@@ -174,18 +176,11 @@ class SettingsFragment : BrowseSupportFragment() {
         return ProfileParentalState(profileId = profileId, parentalEnabled = enabled)
     }
 
-    private fun buildProviderFeedRefreshCoordinator(): ProviderFeedRefreshCoordinator {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return ProviderFeedRefreshCoordinator(
-            liveTvRepository = LiveTvRepository(providerFeedRepository, okHttpClient),
-            epgRepository = EpgRepository(providerFeedRepository, okHttpClient)
+    private fun buildProviderFeedRefreshCoordinator(): ProviderFeedRefreshCoordinator =
+        ProviderFeedRefreshCoordinator(
+            liveTvRepository = AppServices.liveTvRepository(requireContext()),
+            epgRepository = AppServices.epgRepository(requireContext())
         )
-    }
 
     private fun appVersionName(): String {
         return runCatching {
@@ -214,7 +209,7 @@ private class SettingsOptionPresenter : Presenter() {
             setPadding(36, 26, 36, 26)
             setBackgroundColor(Color.rgb(16, 34, 52))
             setOnFocusChangeListener { v, hasFocus ->
-                v.setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(16, 34, 52))
+                v.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else Color.rgb(16, 34, 52))
             }
         }
         return ViewHolder(view)

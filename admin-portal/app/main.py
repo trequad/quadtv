@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.settings import settings
 from app.database import init_db
-from app.routers import announcements, auth, config, devices, jellyfin, notifications, parental, profiles, provider_feeds, provider_sync, releases, subscriptions, users
+from app.routers import announcements, auth, config, devices, jellyfin, notifications, parental, profiles, provider_feeds, provider_sync, releases, seerr, subscriptions, users
 
 
 @asynccontextmanager
@@ -40,6 +40,7 @@ app.include_router(jellyfin.router, prefix=api_prefix)
 app.include_router(provider_sync.router, prefix=api_prefix)
 app.include_router(provider_feeds.router, prefix=api_prefix)
 app.include_router(releases.router, prefix=api_prefix)
+app.include_router(seerr.router, prefix=api_prefix)
 
 @app.get("/health")
 def health():
@@ -51,7 +52,12 @@ def download_file(filename: str):
     if "/" in filename or ".." in filename:
         raise HTTPException(status_code=404, detail="File not found")
     path = f"web/downloads/{filename}"
-    if filename.endswith(".apk"):
+    try:
+        with open(path, "rb") as download:
+            magic = download.read(4)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found") from None
+    if filename.endswith(".apk") or magic == b"PK\x03\x04":
         return FileResponse(
             path,
             media_type="application/vnd.android.package-archive",

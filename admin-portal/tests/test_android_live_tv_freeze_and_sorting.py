@@ -41,6 +41,14 @@ def test_live_tv_expensive_epg_matching_runs_off_main_thread_and_uses_index():
     assert "firstOrNull { programme ->" not in source
 
 
+def test_live_tv_does_not_eagerly_fetch_full_xmltv_on_screen_entry():
+    source = read_android("live/LiveTvFragment.kt")
+    load_block = source.split("private fun loadChannelsFromRepository()", 1)[1].split("private fun profileParentalState()", 1)[0]
+
+    assert "loadCurrentProgrammesIntoRows(visibleChannels, epgRepo)" not in load_block
+    assert "val epgRepo = epgRepository" not in load_block
+
+
 def test_m3u_parser_scans_playlist_linearly_without_drop_per_channel():
     source = read_android("live/M3uParser.kt")
 

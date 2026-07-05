@@ -1,5 +1,6 @@
 package net.trequad.quadtv.jellyfin
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.adminapi.AdminConfigRepository
 import net.trequad.quadtv.core.cache.LaunchConfigCache
@@ -95,7 +97,7 @@ class JellyfinDetailsFragment : Fragment() {
                             text = "Seasons & Episodes"
                             textSize = 24f
                             setTypeface(null, android.graphics.Typeface.BOLD)
-                            setTextColor(Color.rgb(66, 165, 245))
+                            setTextColor(QuadTvTheme.ACCENT)
                             setPadding(0, 0, 0, 16)
                         })
                         showSeriesSeasons(this, item)
@@ -279,16 +281,8 @@ class JellyfinDetailsFragment : Fragment() {
         isSeries = false, isMature = isMature
     )
 
-    private fun buildJellyfinRepository(): JellyfinRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val preferences = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(preferences))
-        return JellyfinRepository(configRepository, okHttpClient, moshi)
-    }
+    private fun buildJellyfinRepository(): JellyfinRepository =
+        AppServices.jellyfinRepository(requireContext())
 
     companion object {
         private const val ARG_ID = "jellyfin_id"

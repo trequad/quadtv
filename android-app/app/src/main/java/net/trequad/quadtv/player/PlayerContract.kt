@@ -49,6 +49,9 @@ interface QuadTvPlayer {
     fun setPlaybackErrorListener(listener: ((Throwable) -> Unit)?) {}
     fun setPlaybackStatusListener(listener: ((String) -> Unit)?) {}
     fun play(request: StreamPlaybackRequest)
+    fun pause() {}
+    fun resume() {}
+    fun seekBy(milliseconds: Long) {}
     fun stop()
     fun release()
 }

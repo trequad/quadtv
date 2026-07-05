@@ -1,5 +1,6 @@
 package net.trequad.quadtv.epg
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -18,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.trequad.quadtv.R
+import net.trequad.quadtv.core.AppServices
 import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.core.cache.CustomerSessionCache
 import net.trequad.quadtv.core.network.NetworkModule
@@ -79,10 +81,10 @@ class EpgGridFragment : Fragment() {
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
             setPadding((20 * dp).toInt(), (14 * dp).toInt(), (20 * dp).toInt(), (8 * dp).toInt())
-            setBackgroundColor(Color.rgb(7, 18, 32))
+            setBackgroundColor(QuadTvTheme.BACKGROUND)
         })
         addView(HorizontalScrollView(context).apply {
-            setBackgroundColor(Color.rgb(12, 30, 50))
+            setBackgroundColor(QuadTvTheme.SURFACE_RAISED)
             topGroupBar = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding((12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt())
@@ -140,9 +142,9 @@ class EpgGridFragment : Fragment() {
             isFocusable = true
             isFocusableInTouchMode = true
             setPadding((18 * dp).toInt(), (10 * dp).toInt(), (18 * dp).toInt(), (10 * dp).toInt())
-            setBackgroundColor(if (group == selectedGroup) Color.rgb(66, 165, 245) else Color.rgb(18, 52, 76))
+            setBackgroundColor(if (group == selectedGroup) QuadTvTheme.ACCENT else Color.rgb(18, 52, 76))
             setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus || group == selectedGroup) Color.rgb(66, 165, 245) else Color.rgb(18, 52, 76))
+                view.setBackgroundColor(if (hasFocus || group == selectedGroup) QuadTvTheme.ACCENT else Color.rgb(18, 52, 76))
             }
             setOnClickListener {
                 selectedGroup = group
@@ -190,9 +192,9 @@ class EpgGridFragment : Fragment() {
             isFocusable = true
             isFocusableInTouchMode = true
             setPadding((20 * dp).toInt(), (12 * dp).toInt(), (20 * dp).toInt(), (12 * dp).toInt())
-            setBackgroundColor(if (isNowPlaying) Color.rgb(18, 52, 76) else Color.rgb(10, 24, 38))
+            setBackgroundColor(if (isNowPlaying) Color.rgb(18, 52, 76) else QuadTvTheme.SURFACE)
             setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus) Color.rgb(66, 165, 245) else if (isNowPlaying) Color.rgb(18, 52, 76) else Color.rgb(10, 24, 38))
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.ACCENT else if (isNowPlaying) Color.rgb(18, 52, 76) else QuadTvTheme.SURFACE)
             }
             setOnClickListener { tuneToProgramme(programme) }
         }
@@ -234,7 +236,7 @@ class EpgGridFragment : Fragment() {
     private fun refreshGroupHighlights() {
         for (i in 0 until topGroupBar.childCount) {
             val child = topGroupBar.getChildAt(i) as? TextView ?: continue
-            child.setBackgroundColor(if (child.tag == selectedGroup) Color.rgb(66, 165, 245) else Color.rgb(18, 52, 76))
+            child.setBackgroundColor(if (child.tag == selectedGroup) QuadTvTheme.ACCENT else Color.rgb(18, 52, 76))
         }
     }
 
@@ -242,25 +244,11 @@ class EpgGridFragment : Fragment() {
 
     private fun isAdultGroup(group: String): Boolean = group.contains("adult", true) || group.contains("xxx", true)
 
-    private fun buildEpgRepository(): EpgRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return EpgRepository(providerFeedRepository, okHttpClient)
-    }
+    private fun buildEpgRepository(): EpgRepository =
+        AppServices.epgRepository(requireContext())
 
-    private fun buildLiveTvRepository(): LiveTvRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, NetworkModule.provideMoshi())
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val sessionPreferences = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPreferences))
-        return LiveTvRepository(providerFeedRepository, okHttpClient)
-    }
+    private fun buildLiveTvRepository(): LiveTvRepository =
+        AppServices.liveTvRepository(requireContext())
 
     companion object {
         private const val ALL_GROUPS = "__all__"

@@ -3,16 +3,10 @@ package net.trequad.quadtv
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import net.trequad.quadtv.adminapi.AdminApiService
 import net.trequad.quadtv.auth.CustomerLoginFragment
 import net.trequad.quadtv.auth.ExpiredSubscriptionFragment
 import net.trequad.quadtv.auth.SubscriptionRequiredFragment
 import net.trequad.quadtv.core.cache.CustomerSessionCache
-import net.trequad.quadtv.core.network.NetworkModule
 import net.trequad.quadtv.epg.EpgGridFragment
 import net.trequad.quadtv.core.cache.OnboardingCache
 import net.trequad.quadtv.favorites.FavoritesFragment
@@ -29,32 +23,13 @@ import net.trequad.quadtv.profiles.ProfilePickerFragment
 import net.trequad.quadtv.search.MovieSearchFragment
 import net.trequad.quadtv.seerr.SeerrFragment
 import net.trequad.quadtv.settings.SettingsFragment
-import net.trequad.quadtv.updates.AppUpdateRepository
-import net.trequad.quadtv.updates.UpdatePromptFragment
 import net.trequad.quadtv.vod.VodBrowseFragment
 
 class MainActivity : FragmentActivity(), QuadTvNavigator {
-    private lateinit var appUpdateRepository: AppUpdateRepository
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        appUpdateRepository = buildAppUpdateRepository()
         if (savedInstanceState == null) {
-            checkForRequiredUpdateThenLaunch()
-        }
-    }
-
-    private fun checkForRequiredUpdateThenLaunch() {
-        lifecycleScope.launch {
-            val status = withContext(Dispatchers.IO) {
-                appUpdateRepository.loadUpdateStatus()
-            }
-
-            if (status.forcedUpdateRequired || status.updateAvailable) {
-                showUpdatePrompt(status)
-            } else {
-                launchLoginOrProfiles()
-            }
+            launchLoginOrProfiles()
         }
     }
 
@@ -127,17 +102,4 @@ class MainActivity : FragmentActivity(), QuadTvNavigator {
         supportFragmentManager.popBackStack()
     }
 
-    private fun showUpdatePrompt(status: net.trequad.quadtv.updates.UpdateStatus) {
-        supportFragmentManager.beginTransaction()
-            .replace(android.R.id.content, UpdatePromptFragment.forStatus(status))
-            .commit()
-    }
-
-    private fun buildAppUpdateRepository(): AppUpdateRepository {
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        return AppUpdateRepository(apiService)
-    }
 }

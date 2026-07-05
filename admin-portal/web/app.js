@@ -5,6 +5,9 @@ const state = {
   devices: [],
   providerSync: [],
   selectedProfileDeviceId: null,
+  selectedUserId: null,
+  userFilter: '',
+  currentRelease: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -93,56 +96,102 @@ function renderMetrics() {
   $('metric-expired').textContent = expired;
 }
 
+function userOptionLabel(user) {
+  const login = user.app_username ? ` · ${user.app_username}` : '';
+  const email = user.email ? ` · ${user.email}` : '';
+  return `${user.display_name}${login}${email} · #${user.id}`;
+}
+
+function userMatchesFilter(user) {
+  const needle = state.userFilter.trim().toLowerCase();
+  if (!needle) return true;
+  return [user.id, user.display_name, user.email, user.app_username]
+    .some((value) => String(value ?? '').toLowerCase().includes(needle));
+}
+
+function selectedUser() {
+  return state.users.find((candidate) => String(candidate.id) === String(state.selectedUserId));
+}
+
 function renderUsers() {
-  const list = $('users-list');
+  const select = $('user-detail-select');
+  const detail = $('user-detail-panel');
+  renderUserSelects();
+
   if (!state.users.length) {
-    list.innerHTML = '<p class="item-meta">No users yet. Add one above.</p>';
-  } else {
-    list.innerHTML = state.users.map((user) => {
-      const status = userStatus(user);
-      return `
-        <div class="item">
-          <div class="item-head">
-            <div>
-              <div class="item-title">${escapeHtml(user.display_name)}</div>
-              <div class="item-meta">${escapeHtml(user.email || 'No email')} · User #${user.id} · ${user.app_username ? `Login: ${escapeHtml(user.app_username)}` : 'No app login'} · Package: ${escapeHtml(packageLabel(user.access_package))}</div>
-            </div>
-            <span class="pill ${status.cls}">${escapeHtml(status.label)}</span>
-          </div>
-          <div class="item-section-label">Subscription</div>
-          <form class="item-actions" data-user-subscription="${user.id}">
-            <input type="date" name="expires_on" value="${escapeHtml(user.expires_on || '')}" />
-            <select name="active">
-              <option value="true" ${user.active ? 'selected' : ''}>Active</option>
-              <option value="false" ${!user.active ? 'selected' : ''}>Inactive</option>
-            </select>
-            <button type="submit">Save</button>
-          </form>
-          <div class="item-section-label">Access package</div>
-          <form class="item-actions" data-user-access="${user.id}">
-            <select name="access_package">
-              <option value="full_access" ${user.access_package === 'full_access' ? 'selected' : ''}>Full Access</option>
-              <option value="live_tv_only" ${user.access_package === 'live_tv_only' ? 'selected' : ''}>Live TV Only</option>
-              <option value="live_tv_vod" ${user.access_package === 'live_tv_vod' ? 'selected' : ''}>Live TV + VOD</option>
-              <option value="live_tv_quaddemand" ${user.access_package === 'live_tv_quaddemand' ? 'selected' : ''}>Live TV + QuadOnDemand</option>
-            </select>
-            <button type="submit">Save</button>
-          </form>
-          <div class="item-meta">Live: ${user.can_access_live_tv ? 'yes' : 'no'} · VOD: ${user.can_access_vod ? 'yes' : 'no'} · QuadOnDemand: ${user.can_access_quaddemand ? 'yes' : 'no'} · Seerr: ${user.can_access_seerr ? 'yes' : 'no'}</div>
-          <div class="item-section-label">App login credentials</div>
-          <form class="item-actions" data-user-credentials="${user.id}">
-            <input type="text" name="app_username" placeholder="Username" value="${escapeHtml(user.app_username || '')}" autocomplete="off" />
-            <input type="password" name="app_pin" placeholder="PIN (leave blank to keep current)" autocomplete="new-password" />
-            <input type="password" name="app_password" placeholder="Legacy password (leave blank to keep current)" autocomplete="new-password" />
-            <button type="submit">Save</button>
-          </form>
-          <div class="item-actions">
-            <button class="danger" data-delete-user="${user.id}" type="button">Delete user</button>
-          </div>
-        </div>`;
-    }).join('');
+    state.selectedUserId = null;
+    select.value = '';
+    $('user-selector-status').textContent = 'No users yet. Add one above.';
+    detail.innerHTML = '<p class="item-meta">No users yet. Add one above.</p>';
+    return;
   }
-  document.querySelectorAll('[data-user-subscription]').forEach((form) => {
+
+  const visibleUsers = state.users.filter(userMatchesFilter);
+  if (!visibleUsers.length) {
+    state.selectedUserId = '';
+    select.value = '';
+    $('user-selector-status').textContent = `No users match “${state.userFilter}”. Clear search to show all ${state.users.length} users.`;
+    detail.innerHTML = '<p class="item-meta">No matching users.</p>';
+    return;
+  }
+
+  if (!state.selectedUserId || !visibleUsers.some((user) => String(user.id) === String(state.selectedUserId))) {
+    state.selectedUserId = visibleUsers[0].id;
+  }
+  select.value = String(state.selectedUserId);
+  $('user-selector-status').textContent = `${visibleUsers.length} of ${state.users.length} users shown in dropdown.`;
+
+  const user = selectedUser();
+  if (!user) {
+    detail.innerHTML = `<p class="item-meta">${state.users.length} users loaded. Pick one from the dropdown to edit subscriptions, packages, login credentials, or delete the account.</p>`;
+    return;
+  }
+
+  const status = userStatus(user);
+  detail.innerHTML = `
+    <div class="item selected-user-detail">
+      <div class="item-head">
+        <div>
+          <div class="item-title">${escapeHtml(user.display_name)}</div>
+          <div class="item-meta">${escapeHtml(user.email || 'No email')} · User #${user.id} · ${user.app_username ? `Login: ${escapeHtml(user.app_username)}` : 'No app login'} · Package: ${escapeHtml(packageLabel(user.access_package))}</div>
+        </div>
+        <span class="pill ${status.cls}">${escapeHtml(status.label)}</span>
+      </div>
+      <div class="item-section-label">Subscription</div>
+      <form class="item-actions" data-user-subscription="${user.id}">
+        <input type="date" name="expires_on" value="${escapeHtml(user.expires_on || '')}" />
+        <select name="active">
+          <option value="true" ${user.active ? 'selected' : ''}>Active</option>
+          <option value="false" ${!user.active ? 'selected' : ''}>Inactive</option>
+        </select>
+        <button type="submit">Save</button>
+      </form>
+      <div class="item-section-label">Access package</div>
+      <form class="item-actions" data-user-access="${user.id}">
+        <select name="access_package">
+          <option value="full_access" ${user.access_package === 'full_access' ? 'selected' : ''}>Full Access</option>
+          <option value="live_tv_only" ${user.access_package === 'live_tv_only' ? 'selected' : ''}>Live TV Only</option>
+          <option value="live_tv_vod" ${user.access_package === 'live_tv_vod' ? 'selected' : ''}>Live TV + VOD</option>
+          <option value="live_tv_quaddemand" ${user.access_package === 'live_tv_quaddemand' ? 'selected' : ''}>Live TV + QuadOnDemand</option>
+        </select>
+        <button type="submit">Save</button>
+      </form>
+      <div class="item-meta">Live: ${user.can_access_live_tv ? 'yes' : 'no'} · VOD: ${user.can_access_vod ? 'yes' : 'no'} · QuadOnDemand: ${user.can_access_quaddemand ? 'yes' : 'no'} · Seerr: ${user.can_access_seerr ? 'yes' : 'no'}</div>
+      <div class="item-section-label">App login credentials</div>
+      <form class="item-actions" data-user-credentials="${user.id}">
+        <input type="text" name="app_username" placeholder="Username" value="${escapeHtml(user.app_username || '')}" autocomplete="off" />
+        <input type="password" name="app_pin" placeholder="PIN (leave blank to keep current)" autocomplete="new-password" />
+        <input type="password" name="app_password" placeholder="Legacy password (leave blank to keep current)" autocomplete="new-password" />
+        <button type="submit">Save</button>
+      </form>
+      <div data-user-overview="${user.id}"><div class="item-meta">Loading account status…</div></div>
+      <div class="item-actions single-action">
+        <button class="danger" data-delete-user="${user.id}" type="button">Delete user</button>
+      </div>
+    </div>`;
+  loadSelectedUserOverview(user.id);
+
+  detail.querySelectorAll('[data-user-subscription]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const userId = form.dataset.userSubscription;
@@ -155,10 +204,11 @@ function renderUsers() {
         }),
       });
       showToast('Subscription updated.');
+      state.selectedUserId = userId;
       await refreshAll();
     });
   });
-  document.querySelectorAll('[data-user-access]').forEach((form) => {
+  detail.querySelectorAll('[data-user-access]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const userId = form.dataset.userAccess;
@@ -168,10 +218,11 @@ function renderUsers() {
         body: JSON.stringify({ access_package: data.get('access_package') }),
       });
       showToast('Access package updated.');
+      state.selectedUserId = userId;
       await refreshAll();
     });
   });
-  document.querySelectorAll('[data-user-credentials]').forEach((form) => {
+  detail.querySelectorAll('[data-user-credentials]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const userId = form.dataset.userCredentials;
@@ -188,18 +239,79 @@ function renderUsers() {
       form.querySelector('[name=app_password]').value = '';
       form.querySelector('[name=app_pin]').value = '';
       showToast('Login credentials updated.');
+      state.selectedUserId = userId;
       await refreshAll();
     });
   });
-  document.querySelectorAll('[data-delete-user]').forEach((btn) => {
+  detail.querySelectorAll('[data-delete-user]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!confirm(`Delete user #${btn.dataset.deleteUser}? This cannot be undone.`)) return;
       await api(`/users/${btn.dataset.deleteUser}`, { method: 'DELETE' });
       showToast('User deleted.');
+      state.selectedUserId = '';
       await refreshAll();
     });
   });
-  renderUserSelects();
+}
+
+function renderUserSetupSummary(summary) {
+  const container = $('user-setup-summary');
+  if (!container) return;
+  const user = summary.user;
+  const jellyfinLabels = {
+    provisioned: '✔ QuadOnDemand login provisioned',
+    failed: '⚠ QuadOnDemand provisioning failed — retry from the user panel',
+    not_configured: '• QuadOnDemand server not configured — skipped',
+    skipped_no_credentials: '• QuadOnDemand skipped — no app login credentials',
+    disabled: '• QuadOnDemand provisioning turned off for this create',
+  };
+  const providerLabels = {
+    linked: '✔ Provider account linked',
+    skipped: '• Provider credentials not supplied yet',
+    conflict: '⚠ Provider username already linked to another customer',
+  };
+  const lines = [
+    `✔ Customer created (#${user.id}, ${escapeHtml(user.display_name)}, ${escapeHtml(packageLabel(user.access_package))}${user.expires_on ? `, expires ${escapeHtml(user.expires_on)}` : ', no expiry'})`,
+    jellyfinLabels[summary.jellyfin_status] || `• QuadOnDemand: ${escapeHtml(summary.jellyfin_status)}`,
+    `${providerLabels[summary.provider_live_tv] || summary.provider_live_tv} (Live TV)`,
+    `${providerLabels[summary.provider_vod] || summary.provider_vod} (VOD)`,
+  ];
+  const warnings = (summary.warnings || []).map((warning) => `⚠ ${escapeHtml(warning)}`);
+  const nextSteps = (summary.next_steps || []).map((step) => `→ ${escapeHtml(step)}`);
+  container.innerHTML = `
+    <div class="item setup-summary">
+      <div class="item-title">Setup summary</div>
+      ${lines.map((line) => `<div class="item-meta">${line}</div>`).join('')}
+      ${warnings.map((line) => `<div class="item-meta warn-text">${line}</div>`).join('')}
+      ${nextSteps.map((line) => `<div class="item-meta">${line}</div>`).join('')}
+      <div class="item-actions single-action"><button class="ghost" type="button" data-dismiss-summary>Dismiss</button></div>
+    </div>`;
+  container.querySelector('[data-dismiss-summary]').addEventListener('click', () => {
+    container.innerHTML = '';
+  });
+}
+
+async function loadSelectedUserOverview(userId) {
+  const target = document.querySelector(`[data-user-overview="${userId}"]`);
+  if (!target) return;
+  try {
+    const overview = await api(`/users/${userId}/overview`);
+    const jellyfin = overview.jellyfin.provisioned
+      ? `✔ provisioned${overview.jellyfin.username ? ` (${escapeHtml(overview.jellyfin.username)})` : ''}`
+      : 'not provisioned';
+    const providers = overview.provider_accounts.length
+      ? overview.provider_accounts.map((account) => `${escapeHtml(account.provider_type)} ✔ ${escapeHtml(account.provider_username)}`).join(' · ')
+      : 'no provider accounts linked';
+    const devices = overview.devices.length
+      ? overview.devices.map((device) => `${escapeHtml(device.device_name)}${device.app_version ? ` (v${escapeHtml(device.app_version)})` : ''}`).join(' · ')
+      : 'no devices linked yet';
+    target.innerHTML = `
+      <div class="item-meta">QuadOnDemand: ${jellyfin}</div>
+      <div class="item-meta">Provider: ${providers}</div>
+      <div class="item-meta">Devices: ${devices}</div>`;
+  } catch (error) {
+    target.innerHTML = '<div class="item-meta">Could not load account status.</div>';
+  }
 }
 
 function renderDevices() {
@@ -226,8 +338,11 @@ function renderDevices() {
 
 function renderUserSelects() {
   const options = state.users.map((user) => `<option value="${user.id}">${escapeHtml(user.display_name)}</option>`).join('');
+  const filteredUsers = state.users.filter(userMatchesFilter);
+  const detailOptions = filteredUsers.map((user) => `<option value="${user.id}">${escapeHtml(userOptionLabel(user))}</option>`).join('');
   $('assign-user-select').innerHTML = options || '<option value="">No users</option>';
   $('provider-sync-user-select').innerHTML = options || '<option value="">No users</option>';
+  $('user-detail-select').innerHTML = detailOptions || '<option value="">No matching users</option>';
 }
 
 function renderDeviceSelects() {
@@ -237,11 +352,19 @@ function renderDeviceSelects() {
 }
 
 function fillConfig(config) {
-  $('config-live').value = config.live_tv_endpoint || '';
-  $('config-xmltv').value = config.xmltv_endpoint || '';
-  $('config-vod').value = config.vod_endpoint || '';
+  $('config-live').value = config.live_tv_provider_base_url || '';
+  $('config-vod').value = config.vod_provider_base_url || '';
   $('config-jellyfin-url').value = config.jellyfin_base_url || '';
-  $('config-jellyfin-key').value = config.jellyfin_api_key || '';
+  $('config-jellyfin-key').value = '';
+  $('config-jellyfin-key').placeholder = config.jellyfin_api_key_set
+    ? 'Configured — enter a new key to replace'
+    : 'Not configured';
+  $('config-seerr-url').value = config.seerr_base_url || '';
+  $('config-seerr-email').value = config.seerr_email || '';
+  $('config-seerr-password').value = '';
+  $('config-seerr-password').placeholder = config.seerr_password_set
+    ? 'Configured — enter a new password to replace'
+    : 'Not configured';
   $('config-max-profiles').value = config.max_profiles_per_device;
   $('config-live-limit').value = config.live_stream_limit_per_user;
   $('config-vod-limit').value = config.vod_stream_limit_per_user;
@@ -359,6 +482,7 @@ async function loadReleases() {
 
 function renderCurrentRelease(status) {
   const el = $('current-release-info');
+  state.currentRelease = status?.release || null;
   if (!status || !status.release) {
     el.innerHTML = '<p class="muted">No published release yet.</p>';
     return;
@@ -367,8 +491,7 @@ function renderCurrentRelease(status) {
   el.innerHTML = `
     <div class="list-row">
       <strong>v${r.version_name}</strong> (code ${r.version_code})
-      ${r.forced ? '<span class="pill danger">Force update</span>' : '<span class="pill ok">Optional</span>'}
-      <div style="margin-top:4px;font-size:0.85em;color:#aaa">Min supported code: ${r.minimum_supported_version_code}</div>
+      <span class="pill ok">Optional</span>
       ${r.changelog ? `<div style="margin-top:6px;font-size:0.9em">${r.changelog}</div>` : ''}
       <div style="margin-top:6px;font-size:0.8em;word-break:break-all"><a href="${r.apk_url}" target="_blank">${r.apk_url}</a></div>
     </div>`;
@@ -377,6 +500,30 @@ function renderCurrentRelease(status) {
 function toIsoOrNull(localDateTime) {
   if (!localDateTime) return null;
   return new Date(localDateTime).toISOString();
+}
+
+function inferVersionNameFromFilename(filename) {
+  const stem = filename.replace(/\.apk$/i, '').replace(/[_\s]+/g, '-');
+  const beta = stem.match(/beta[-_\s]*(\d+)/i);
+  if (beta) return `1.0.0-beta${beta[1]}`;
+  const semantic = stem.match(/(\d+\.\d+\.\d+(?:[-.][A-Za-z0-9]+)?)/);
+  if (semantic) return semantic[1].replace(/\.beta/i, '-beta');
+  return stem;
+}
+
+function nextReleaseCode() {
+  const currentCode = Number(state.currentRelease?.version_code || 0);
+  const typedCode = Number($('release-version-code').value || 0);
+  return Math.max(currentCode, typedCode, 0) + 1;
+}
+
+function autoFillReleaseFieldsFromUpload(result, originalFilename) {
+  const fullUrl = new URL(result.apk_url, window.location.origin).href;
+  const nextCode = nextReleaseCode();
+  $('release-apk-url').value = fullUrl;
+  $('release-version-name').value = $('release-version-name').value || inferVersionNameFromFilename(originalFilename || result.filename);
+  $('release-version-code').value = nextCode;
+  $('release-min-version-code').value = '0';
 }
 
 function bindEvents() {
@@ -410,25 +557,40 @@ function bindEvents() {
     showToast('Dashboard refreshed.');
   });
 
+  $('user-search').addEventListener('input', (event) => {
+    state.userFilter = event.target.value;
+    state.selectedUserId = '';
+    renderUsers();
+  });
+
   $('create-user-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const appUsername = $('user-app-username').value.trim() || null;
-    const appPin = $('user-app-pin').value || null;
-    const appPassword = $('user-app-password').value || null;
-    await api('/users', {
+    const summary = await api('/users/full-setup', {
       method: 'POST',
       body: JSON.stringify({
         display_name: $('user-display-name').value,
         email: $('user-email').value || null,
-        app_username: appUsername,
-        app_pin: appPin,
-        app_password: appPassword,
+        app_username: $('user-app-username').value.trim() || null,
+        app_pin: $('user-app-pin').value || null,
+        app_password: $('user-app-password').value || null,
         access_package: $('user-access-package').value,
+        expires_on: $('user-expires-on').value || null,
+        provider_username: $('user-provider-username').value.trim() || null,
+        provider_password: $('user-provider-password').value || null,
+        provision_jellyfin: $('user-provision-jellyfin').checked,
       }),
     });
+    state.selectedUserId = summary.user.id;
     event.target.reset();
-    showToast('User added.');
+    $('user-provision-jellyfin').checked = true;
+    renderUserSetupSummary(summary);
+    showToast('Customer created.');
     await refreshAll();
+  });
+
+  $('user-detail-select').addEventListener('change', (event) => {
+    state.selectedUserId = event.target.value;
+    renderUsers();
   });
 
   $('assign-device-form').addEventListener('submit', async (event) => {
@@ -461,16 +623,19 @@ function bindEvents() {
     await api('/app/config', {
       method: 'PUT',
       body: JSON.stringify({
-        live_tv_endpoint: $('config-live').value,
-        xmltv_endpoint: $('config-xmltv').value,
-        vod_endpoint: $('config-vod').value,
+        live_tv_provider_base_url: $('config-live').value,
+        vod_provider_base_url: $('config-vod').value,
         jellyfin_base_url: $('config-jellyfin-url').value || null,
         jellyfin_api_key: $('config-jellyfin-key').value || null,
+        seerr_base_url: $('config-seerr-url').value || null,
+        seerr_email: $('config-seerr-email').value || null,
+        seerr_password: $('config-seerr-password').value || null,
         max_profiles_per_device: Number($('config-max-profiles').value),
         warning_threshold_days: $('config-warning-days').value.split(',').map((value) => Number(value.trim())).filter((value) => !Number.isNaN(value)),
         live_stream_limit_per_user: Number($('config-live-limit').value),
         vod_stream_limit_per_user: Number($('config-vod-limit').value),
         jellyfin_stream_limit_per_user: Number($('config-jellyfin-limit').value),
+        provider_feed_refresh_hours: Number($('config-provider-refresh-hours')?.value || 24),
       }),
     });
     showToast('Endpoint config saved.');
@@ -496,6 +661,39 @@ function bindEvents() {
     await refreshAll();
   });
 
+  $('upload-release-apk-button').addEventListener('click', async () => {
+    const fileInput = $('release-apk-file');
+    const statusEl = $('release-status');
+    if (!fileInput.files || fileInput.files.length === 0) {
+      statusEl.textContent = 'Choose an APK file first.';
+      return;
+    }
+    const formData = new FormData();
+    formData.append('apk', fileInput.files[0]);
+    statusEl.textContent = 'Uploading APK…';
+    try {
+      const response = await fetch(`${API}/releases/upload`, {
+        method: 'POST',
+        headers: headers(false),
+        body: formData,
+      });
+      if (!response.ok) {
+        let detail = `${response.status} ${response.statusText}`;
+        try {
+          const payload = await response.json();
+          detail = payload.detail || detail;
+        } catch (_) {}
+        throw new Error(detail);
+      }
+      const result = await response.json();
+      autoFillReleaseFieldsFromUpload(result, fileInput.files[0].name);
+      statusEl.textContent = `APK uploaded: ${result.filename}. URL and version code are filled. Review, add changelog, then Publish release.`;
+      showToast('APK uploaded.');
+    } catch (err) {
+      statusEl.textContent = `Upload error: ${err.message}`;
+    }
+  });
+
   $('publish-release-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const statusEl = $('release-status');
@@ -507,9 +705,9 @@ function bindEvents() {
           version_name: $('release-version-name').value,
           version_code: parseInt($('release-version-code').value, 10),
           apk_url: $('release-apk-url').value,
-          minimum_supported_version_code: parseInt($('release-min-version-code').value, 10),
+          minimum_supported_version_code: 0,
           changelog: $('release-changelog').value || 'No changelog provided.',
-          forced: $('release-forced').checked,
+          forced: false,
           published: true,
           release_date: null,
         }),

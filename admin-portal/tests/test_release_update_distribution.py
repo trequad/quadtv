@@ -9,6 +9,7 @@ PROJECT_ROOT = ADMIN_ROOT.parent
 ANDROID_SRC = PROJECT_ROOT / "android-app/app/src/main/java/net/trequad/quadtv"
 README = PROJECT_ROOT / "README.md"
 PLAN = PROJECT_ROOT / "docs" / "IMPLEMENTATION_PLAN.md"
+SCRIPT = PROJECT_ROOT / "scripts" / "build_and_publish_beta.py"
 
 if str(ADMIN_ROOT) not in sys.path:
     sys.path.insert(0, str(ADMIN_ROOT))
@@ -83,16 +84,90 @@ def test_release_metadata_defaults_empty_and_admin_publish_persists(tmp_path, mo
     current = current_response.json()
     assert current["update_available"] is True
     assert current["release"]["version_name"] == "0.2.0"
-    assert current["release"]["minimum_supported_version_code"] == 10
+    assert current["release"]["minimum_supported_version_code"] == 0
 
 
-def test_forced_update_status_depends_on_client_version(tmp_path, monkeypatch):
+def test_admin_can_upload_apk_for_release_publishing(tmp_path, monkeypatch):
+    client, _ = build_client(tmp_path, monkeypatch)
+    token = admin_token(client)
+
+    unauthorized = client.post(
+        "/api/v1/releases/upload",
+        files={"apk": ("QuadTV-beta.apk", b"PK\x03\x04fake-apk", "application/vnd.android.package-archive")},
+    )
+    assert unauthorized.status_code in {401, 403}
+
+    response = client.post(
+        "/api/v1/releases/upload",
+        files={"apk": ("QuadTV beta 2.apk", b"PK\x03\x04fake-apk", "application/vnd.android.package-archive")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["apk_url"].startswith("/downloads/")
+    assert payload["apk_url"].endswith(".apk")
+    assert payload["filename"] in payload["apk_url"]
+    assert payload["size_bytes"] == len(b"PK\x03\x04fake-apk")
+    stored = ADMIN_ROOT / "web" / "downloads" / payload["filename"]
+    assert stored.read_bytes().startswith(b"PK\x03\x04")
+
+    bad = client.post(
+        "/api/v1/releases/upload",
+        files={"apk": ("notes.txt", b"not an apk", "text/plain")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert bad.status_code == 400
+
+
+def test_download_route_returns_404_for_missing_apk_and_apk_mime_for_zip_magic(tmp_path, monkeypatch):
+    client, _ = build_client(tmp_path, monkeypatch)
+
+    missing = client.get("/downloads/missing-beta.apk")
+    assert missing.status_code == 404
+
+    downloads = ADMIN_ROOT / "web" / "downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    extensionless = downloads / "app-beta-test"
+    extensionless.write_bytes(b"PK\x03\x04fake-apk")
+    try:
+        response = client.get("/downloads/app-beta-test")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/vnd.android.package-archive")
+        assert response.content.startswith(b"PK\x03\x04")
+    finally:
+        extensionless.unlink(missing_ok=True)
+
+
+def test_release_dashboard_has_apk_upload_controls():
+    html = (ADMIN_ROOT / "web" / "index.html").read_text()
+    js = (ADMIN_ROOT / "web" / "app.js").read_text()
+
+    assert 'id="release-apk-file"' in html
+    assert 'type="file"' in html
+    assert 'accept=".apk,application/vnd.android.package-archive"' in html
+    assert 'id="upload-release-apk-button"' in html
+    assert "Upload APK" in html
+    assert "auto-filled after upload" in html
+    assert 'id="release-apk-url"' in html and "readonly" in html
+    assert "/releases/upload" in js
+    assert "FormData" in js
+    assert "release-apk-url" in js
+    assert "autoFillReleaseFieldsFromUpload" in js
+    assert "inferVersionNameFromFilename" in js
+    assert "nextReleaseCode" in js
+    assert "release-forced" not in html
+    assert "release-forced" not in js
+    assert "Force update" not in html
+    assert "forced update" not in js.lower()
+
+
+def test_release_status_never_requires_forced_update_even_for_stale_clients(tmp_path, monkeypatch):
     client, _ = build_client(tmp_path, monkeypatch)
     token = admin_token(client)
     payload = {
         "version_name": "1.0.0",
         "version_code": 100,
-        "changelog": "Required signed APK update.",
+        "changelog": "Optional signed APK update.",
         "apk_url": "/releases/quadtv-1.0.0.apk",
         "minimum_supported_version_code": 90,
         "forced": True,
@@ -109,64 +184,53 @@ def test_forced_update_status_depends_on_client_version(tmp_path, monkeypatch):
     current_enough = client.get("/api/v1/releases/current?current_version_code=100").json()
 
     assert stale["update_available"] is True
-    assert stale["forced_update_required"] is True
+    assert stale["forced_update_required"] is False
     assert stale["release"]["apk_url"] == "/releases/quadtv-1.0.0.apk"
     assert current_enough["update_available"] is False
     assert current_enough["forced_update_required"] is False
 
 
-def test_android_update_models_repository_and_prompt_are_present():
+def test_beta_publish_script_creates_optional_releases_only():
+    content = SCRIPT.read_text()
+
+    assert "forced=True" not in content
+    assert "forced=False" in content
+    assert "minimum_supported_version_code=0" in content
+
+
+def test_android_app_has_no_update_prompt_or_release_status_gate():
     api = read_android("adminapi/AdminApiService.kt")
-    models = read_android("updates/UpdateModels.kt")
-    repository = read_android("updates/AppUpdateRepository.kt")
-    prompt = read_android("updates/UpdatePromptFragment.kt")
     main = read_android("MainActivity.kt")
 
-    assert "@GET(\"api/v1/releases/current\")" in api
-    assert "current_version_code" in api
-    assert "data class AppRelease" in models
-    assert "versionName: String" in models
-    assert "versionCode: Int" in models
-    assert "minimumSupportedVersionCode: Int" in models
-    assert "forced: Boolean" in models
-    assert "apkUrl: String" in models
-    assert "data class UpdateStatus" in models
-    assert "forcedUpdateRequired: Boolean" in models
-    assert "BuildConfig.VERSION_CODE" in repository
-    assert "loadUpdateStatus" in repository
-    assert "QuadTV Update Available" in prompt
-    assert "Update Required" in prompt
-    assert "sideload" in prompt.lower()
-    assert "arbitrary APK URL" not in prompt
-    assert "UpdatePromptFragment" in main
+    assert "api/v1/releases/current" not in api
+    assert "getCurrentReleaseStatus" not in api
+    assert "AppUpdateRepository" not in main
+    assert "UpdatePromptFragment" not in main
+    assert "checkForRequiredUpdateThenLaunch" not in main
+    assert "showUpdatePrompt" not in main
+    assert "launchLoginOrProfiles()" in main
 
 
-def test_main_activity_checks_private_apk_update_status_before_login():
+def test_main_activity_launches_directly_without_private_apk_update_status_check():
     main = read_android("MainActivity.kt")
 
-    assert "private lateinit var appUpdateRepository: AppUpdateRepository" in main
-    assert "appUpdateRepository = buildAppUpdateRepository()" in main
-    assert "checkForRequiredUpdateThenLaunch()" in main
-    assert "lifecycleScope.launch" in main
-    assert "withContext(Dispatchers.IO)" in main
-    assert "appUpdateRepository.loadUpdateStatus()" in main
-    assert "status.forcedUpdateRequired" in main
-    assert "showUpdatePrompt(status)" in main
+    assert "private lateinit var appUpdateRepository" not in main
+    assert "buildAppUpdateRepository" not in main
+    assert "lifecycleScope.launch" not in main
+    assert "appUpdateRepository.loadUpdateStatus()" not in main
+    assert "forcedUpdateRequired" not in main
+    assert "showUpdatePrompt" not in main
     assert "navigateTo(QuadTvRoute.LOGIN)" in main
-    assert "NetworkModule.provideRetrofit(okHttpClient, moshi)" in main
-    assert "retrofit.create(AdminApiService::class.java)" in main
-    assert "AppUpdateRepository(apiService)" in main
+    assert "launchLoginOrProfiles()" in main
 
 
-def test_update_prompt_can_return_to_login_for_optional_updates_but_forced_blocks():
-    prompt = read_android("updates/UpdatePromptFragment.kt")
+def test_update_prompt_source_is_removed_from_android_app():
     main = read_android("MainActivity.kt")
+    updates_dir = ANDROID_SRC / "updates"
 
-    assert "Continue to QuadTV" in prompt
-    assert "visibility = View.GONE" in prompt
-    assert "(activity as? QuadTvNavigator)?.navigateTo(QuadTvRoute.LOGIN)" in prompt
-    assert "showUpdatePrompt(status)" in main
-    assert "status.updateAvailable" in main
+    assert not updates_dir.exists()
+    assert "showUpdatePrompt" not in main
+    assert "status.updateAvailable" not in main
 
 
 def test_docs_record_private_signed_apk_update_slice():

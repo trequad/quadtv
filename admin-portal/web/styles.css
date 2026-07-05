@@ -136,6 +136,7 @@ button.danger:hover { background: rgba(255, 92, 122, .32); filter: none; }
 .item-title { font-weight: 850; }
 .item-meta { color: var(--muted); font-size: .86rem; }
 .item-actions { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; margin-top: .25rem; }
+.item-actions.single-action { grid-template-columns: minmax(180px, 320px); }
 .item-section-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: .75rem; }
 
 .pill {
@@ -169,3 +170,6 @@ button.danger:hover { background: rgba(255, 92, 122, .32); filter: none; }
   .topbar { align-items: flex-start; }
   main { padding: 1rem; }
 }
+
+.setup-summary { border-left: 3px solid #2c5f7c; }
+.warn-text { color: #e67e22; }

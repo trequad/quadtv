@@ -9,7 +9,8 @@ import okhttp3.Request
 class JellyfinRepository(
     private val adminConfigRepository: AdminConfigRepository,
     private val okHttpClient: OkHttpClient,
-    private val moshi: Moshi
+    private val moshi: Moshi,
+    private val accessProvider: JellyfinAccessProvider? = null
 ) {
     suspend fun loadLibraries(): List<JellyfinLibrary> {
         val context = loadContext() ?: return emptyList()
@@ -53,6 +54,28 @@ class JellyfinRepository(
             context.apiKey
         )
         return executeItemsRequest(request)?.totalRecordCount ?: 0
+    }
+
+    /** Per-user Continue Watching (resume points). Needs a provisioned Jellyfin user. */
+    suspend fun loadContinueWatching(limit: Int = 12): List<JellyfinItem> {
+        val access = accessProvider?.loadAccess() ?: return emptyList()
+        val userId = access.jellyfinUserId ?: return emptyList()
+        val baseUrl = access.baseUrl.trimEnd('/')
+        val request = authorizedRequest(
+            "$baseUrl/Users/$userId/Items/Resume?Limit=$limit&Recursive=true&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&MediaTypes=Video",
+            access.apiKey
+        )
+        return executeItemsRequest(request)?.items.orEmpty().map { it.toItem(baseUrl) }
+    }
+
+    /** Newest additions to the library (movies and shows mixed), for the Home hub. */
+    suspend fun loadRecentlyAddedPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
+        val context = loadContext() ?: return emptyPage(startIndex, limit)
+        val request = authorizedRequest(
+            "${context.baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie,Series&SortBy=DateCreated&SortOrder=Descending&Fields=Overview,OfficialRating,ProductionYear,PrimaryImageAspectRatio&StartIndex=$startIndex&Limit=$limit",
+            context.apiKey
+        )
+        return executeItemsPage(request, context.baseUrl, startIndex, limit)
     }
 
     suspend fun loadRecentlyReleasedMoviesPage(startIndex: Int = 0, limit: Int = DEFAULT_PAGE_SIZE): JellyfinPage {
@@ -146,6 +169,11 @@ class JellyfinRepository(
     }
 
     private suspend fun loadContext(): JellyfinContext? {
+        // Preferred: authenticated per-customer access from the portal. The
+        // unauthenticated launch config no longer carries the API key.
+        accessProvider?.loadAccess()?.let { access ->
+            return JellyfinContext(baseUrl = access.baseUrl.trimEnd('/'), apiKey = access.apiKey)
+        }
         val launchConfig = adminConfigRepository.loadLaunchConfig()
         val baseUrl = launchConfig.jellyfinBaseUrl?.trimEnd('/') ?: return null
         val apiKey = launchConfig.jellyfinApiKey ?: return null

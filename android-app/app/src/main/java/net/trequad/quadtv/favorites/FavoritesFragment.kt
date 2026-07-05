@@ -1,5 +1,6 @@
 package net.trequad.quadtv.favorites
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
 import android.graphics.Color
 import android.os.Bundle
 import android.view.ViewGroup
@@ -127,7 +128,7 @@ private class FavoritesActionPresenter : Presenter() {
             textSize = 20f
             setTextColor(Color.WHITE)
             setPadding(32, 24, 32, 24)
-            setBackgroundColor(Color.rgb(44, 95, 124))
+            setBackgroundColor(QuadTvTheme.FOCUS)
         }
         return ViewHolder(view)
     }

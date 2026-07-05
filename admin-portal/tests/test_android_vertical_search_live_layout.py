@@ -64,7 +64,8 @@ def test_home_screen_has_left_menu_and_right_feature_rows():
     assert "HomeAction(\"QuadOnDemand\", QuadTvRoute.JELLYFIN)" in source
     assert "HomeAction(\"Search\", QuadTvRoute.MOVIE_SEARCH)" in source
     assert "HomeAction(\"Refresh\", refreshProviderFeeds = true)" in source
-    assert "HomeAction(\"Seerr\", QuadTvRoute.SEERR)" in source
+    # Customer-facing label is "Requests"; Seerr is an internal name.
+    assert "HomeAction(\"Requests\", QuadTvRoute.SEERR)" in source
     assert "Recently Watched Channels" in source
     assert "Recently Added VOD" in source
     assert "Recently Released QuadOnDemand Movies" in source

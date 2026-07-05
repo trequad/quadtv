@@ -20,5 +20,9 @@ data class CustomerLoginResponse(
     @Json(name = "can_access_vod") val canAccessVod: Boolean = true,
     @Json(name = "can_access_quaddemand") val canAccessQuaddemand: Boolean = true,
     @Json(name = "can_access_seerr") val canAccessSeerr: Boolean = true,
+    // Per-user QuadOnDemand session issued by the portal at login.
+    @Json(name = "jellyfin_base_url") val jellyfinBaseUrl: String? = null,
+    @Json(name = "jellyfin_user_id") val jellyfinUserId: String? = null,
+    @Json(name = "jellyfin_access_token") val jellyfinAccessToken: String? = null,
     val message: String?
 )

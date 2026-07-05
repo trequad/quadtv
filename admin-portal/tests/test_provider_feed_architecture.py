@@ -23,7 +23,7 @@ def test_launch_config_models_provider_base_urls_not_global_playlist_urls():
     assert "@Json(name = \"vod_provider_base_url\") val vodProviderBaseUrl" in api
     assert "KEY_LIVE_TV_PROVIDER_BASE_URL" in cache
     assert "KEY_VOD_PROVIDER_BASE_URL" in cache
-    assert "OPERATOR_LIVE_TV_PROVIDER_BASE_URL = \"http://by.questreams.com:83\"" in constants
+    assert "OPERATOR_LIVE_TV_PROVIDER_BASE_URL = \"http://ahhshitherewegoagain.sytes.net\"" in constants
     assert "OPERATOR_VOD_PROVIDER_BASE_URL = \"https://livinitup.online\"" in constants
     assert "liveTvEndpoint" not in launch
     assert "xmltvEndpoint" not in launch

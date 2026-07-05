@@ -12,10 +12,8 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
-import retrofit2.http.Query
 import net.trequad.quadtv.profiles.ProfileCreateRequest
 import net.trequad.quadtv.profiles.QuadTvProfile
-import net.trequad.quadtv.updates.UpdateStatusDto
 
 interface AdminApiService {
     @GET("api/v1/app/config")
@@ -48,11 +46,24 @@ interface AdminApiService {
         @Body request: FcmTokenRegistrationRequest
     ): FcmTokenRegistrationResponse
 
-    @GET("api/v1/releases/current")
-    suspend fun getCurrentReleaseStatus(
-        @Query("current_version_code") currentVersionCode: Int
-    ): UpdateStatusDto
+    @POST("api/v1/seerr/session")
+    suspend fun createSeerrSession(@Header("Authorization") authorization: String): SeerrSessionDto
+
+    @GET("api/v1/jellyfin/access")
+    suspend fun getJellyfinAccess(@Header("Authorization") authorization: String): JellyfinAccessDto
 }
+
+data class SeerrSessionDto(
+    @Json(name = "base_url") val baseUrl: String,
+    @Json(name = "session_cookie") val sessionCookie: String
+)
+
+data class JellyfinAccessDto(
+    @Json(name = "base_url") val baseUrl: String,
+    @Json(name = "api_key") val apiKey: String,
+    @Json(name = "jellyfin_username") val jellyfinUsername: String?,
+    @Json(name = "jellyfin_user_id") val jellyfinUserId: String?
+)
 
 data class ProviderFeedDto(
     @Json(name = "live_tv_playlist_url") val liveTvPlaylistUrl: String,

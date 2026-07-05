@@ -1,5 +1,7 @@
 package net.trequad.quadtv.vod
 
+import net.trequad.quadtv.core.ui.QuadTvTheme
+import net.trequad.quadtv.core.AppServices
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -72,15 +74,15 @@ class VodBrowseFragment : Fragment() {
 
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(12, 30, 50))
+            setBackgroundColor(QuadTvTheme.SURFACE_RAISED)
             layoutParams = LinearLayout.LayoutParams(navWidth, LinearLayout.LayoutParams.MATCH_PARENT)
             addView(TextView(context).apply {
                 text = "On-Demand"
                 textSize = 20f
                 setTypeface(null, Typeface.BOLD)
-                setTextColor(Color.rgb(66, 165, 245))
+                setTextColor(QuadTvTheme.ACCENT)
                 setPadding((16 * dp).toInt(), (20 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt())
-                setBackgroundColor(Color.rgb(7, 18, 32))
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
             })
             addView(divider(context, horizontal = true))
             categoryContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -98,7 +100,7 @@ class VodBrowseFragment : Fragment() {
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding((20 * dp).toInt(), (16 * dp).toInt(), (20 * dp).toInt(), (8 * dp).toInt())
-                setBackgroundColor(Color.rgb(7, 18, 32))
+                setBackgroundColor(QuadTvTheme.BACKGROUND)
                 contentHeader = TextView(context).apply {
                     text = "Recently Added"
                     textSize = 22f
@@ -110,7 +112,7 @@ class VodBrowseFragment : Fragment() {
                 addView(TextView(context).apply {
                     text = "🔍 Search"
                     textSize = 16f
-                    setTextColor(Color.rgb(66, 165, 245))
+                    setTextColor(QuadTvTheme.ACCENT)
                     setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), 0)
                     isFocusable = true
                     isFocusableInTouchMode = true
@@ -152,7 +154,7 @@ class VodBrowseFragment : Fragment() {
         addView(divider(context, horizontal = false))
         val jumpRailWidth = (JUMP_RAIL_WIDTH_DP * dp).toInt()
         addView(ScrollView(context).apply {
-            setBackgroundColor(Color.rgb(7, 18, 32))
+            setBackgroundColor(QuadTvTheme.BACKGROUND)
             isFillViewport = false
             layoutParams = LinearLayout.LayoutParams(jumpRailWidth, LinearLayout.LayoutParams.MATCH_PARENT)
             jumpRailContainer = LinearLayout(context).apply {
@@ -204,9 +206,9 @@ class VodBrowseFragment : Fragment() {
             isFocusable = true
             isFocusableInTouchMode = true
             setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
-            setBackgroundColor(if (selected) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+            setBackgroundColor(if (selected) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
             setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus || sectionId == selectedSectionId) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+                view.setBackgroundColor(if (hasFocus || sectionId == selectedSectionId) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
             }
             setOnClickListener { selectSection(sectionId, label.trimEnd()) }
         })
@@ -314,7 +316,7 @@ class VodBrowseFragment : Fragment() {
         for (i in 0 until categoryContainer.childCount) {
             val child = categoryContainer.getChildAt(i) as? TextView ?: continue
             val tag = child.tag as? String ?: continue
-            child.setBackgroundColor(if (tag == selectedSectionId) Color.rgb(44, 95, 124) else Color.rgb(10, 24, 38))
+            child.setBackgroundColor(if (tag == selectedSectionId) QuadTvTheme.FOCUS else QuadTvTheme.SURFACE)
         }
     }
 
@@ -347,7 +349,7 @@ class VodBrowseFragment : Fragment() {
             setPadding(0, (3 * dp).toInt(), 0, (3 * dp).toInt())
             setOnClickListener { onClick() }
             setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus) Color.rgb(66, 165, 245) else Color.TRANSPARENT)
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.ACCENT else Color.TRANSPARENT)
             }
         }
     }
@@ -380,7 +382,7 @@ class VodBrowseFragment : Fragment() {
     }
 
     private fun divider(context: Context, horizontal: Boolean) = View(context).apply {
-        setBackgroundColor(Color.rgb(44, 95, 124))
+        setBackgroundColor(QuadTvTheme.FOCUS)
         layoutParams = if (horizontal) {
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (2 * context.resources.displayMetrics.density).toInt())
         } else {
@@ -392,7 +394,7 @@ class VodBrowseFragment : Fragment() {
         text = title
         textSize = 18f
         setTypeface(null, Typeface.BOLD)
-        setTextColor(Color.rgb(66, 165, 245))
+        setTextColor(QuadTvTheme.ACCENT)
         setPadding(20, 20, 20, 8)
     }
 
@@ -400,18 +402,8 @@ class VodBrowseFragment : Fragment() {
         statusText.text = msg
     }
 
-    private fun buildVodRepository(): VodRepository {
-        val context = requireContext().applicationContext
-        val okHttpClient = NetworkModule.provideOkHttpClient()
-        val moshi = NetworkModule.provideMoshi()
-        val retrofit = NetworkModule.provideRetrofit(okHttpClient, moshi)
-        val apiService = retrofit.create(AdminApiService::class.java)
-        val prefs = context.getSharedPreferences(LaunchConfigCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val sessionPrefs = context.getSharedPreferences(CustomerSessionCache.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val configRepository = AdminConfigRepository(apiService, LaunchConfigCache(prefs))
-        val providerFeedRepository = ProviderFeedRepository(apiService, CustomerSessionCache(sessionPrefs))
-        return VodRepository(configRepository, okHttpClient, moshi, providerFeedRepository)
-    }
+    private fun buildVodRepository(): VodRepository =
+        AppServices.vodRepository(requireContext())
 
     companion object {
         private const val NAV_PANE_WIDTH_DP = 220
@@ -469,7 +461,7 @@ private class VodGridAdapter(
             val dp = card.context.resources.displayMetrics.density
             val posterHeight = (cardWidth * 1.5f).toInt()
             card.setOnFocusChangeListener { view, hasFocus ->
-                view.setBackgroundColor(if (hasFocus) Color.rgb(44, 95, 124) else Color.rgb(12, 30, 48))
+                view.setBackgroundColor(if (hasFocus) QuadTvTheme.FOCUS else Color.rgb(12, 30, 48))
             }
             card.setOnClickListener { onClick(item) }
             val posterView = ImageView(card.context).apply {
