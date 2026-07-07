@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -19,10 +20,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ANDROID_DIR = ROOT / "android-app"
 GRADLE_FILE = ANDROID_DIR / "app" / "build.gradle.kts"
-DEFAULT_ORIGIN_API = "http://127.0.0.1:8088"
-DEFAULT_PUBLIC_BASE_URL = "https://example.invalid"
-DEFAULT_DEPLOY_HOST = "user@example.invalid"
-DEFAULT_DEPLOY_PATH = "/opt/quadtv-admin"
+DEFAULT_ORIGIN_API = os.environ.get("QUADTV_PUBLISH_ORIGIN_API", "http://127.0.0.1:8088")
+DEFAULT_PUBLIC_BASE_URL = os.environ.get("QUADTV_PUBLISH_PUBLIC_BASE_URL", "https://example.invalid")
+DEFAULT_DEPLOY_HOST = os.environ.get("QUADTV_PUBLISH_DEPLOY_HOST", "user@example.invalid")
+DEFAULT_DEPLOY_PATH = os.environ.get("QUADTV_PUBLISH_DEPLOY_PATH", "/opt/quadtv-admin")
 
 
 def run(cmd: list[str], *, cwd: Path | None = None, input_text: str | None = None) -> str:

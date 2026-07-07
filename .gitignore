@@ -38,3 +38,11 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+
+# Local-only operator/agent documentation
+AGENTS.md
+CLAUDE.md
+*DEPLOYMENT-STATUS.md
+docs/
+*.handoff.md
+.local-secrets/
