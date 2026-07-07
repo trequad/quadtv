@@ -41,7 +41,7 @@ def test_android_network_security_allows_only_required_http_hosts():
 
     assert 'android:networkSecurityConfig="@xml/network_security_config"' in manifest
     assert '<domain includeSubdomains="false">ahhshitherewegoagain.sytes.net</domain>' in network_config
-    assert "<domain includeSubdomains=\"false\">10.34.1.194</domain>" in network_config
+    assert "10.34.1.194" not in network_config
     assert "<domain includeSubdomains=\"false\">10.34.1.192</domain>" in network_config
     assert 'cleartextTrafficPermitted="true"' in network_config
     assert "livinitup.online" not in network_config
@@ -49,16 +49,16 @@ def test_android_network_security_allows_only_required_http_hosts():
     assert "7248659130" not in network_config
 
 
-def test_docs_record_provider_endpoint_without_raw_test_credentials():
-    combined_docs = README.read_text() + "\n" + PLAN.read_text()
+def test_public_readme_omits_raw_test_credentials_and_operator_details():
+    public_readme = README.read_text()
 
-    assert "Operator-controlled provider endpoint constants" in combined_docs
-    assert "http://ahhshitherewegoagain.sytes.net" in combined_docs
-    assert "https://livinitup.online" in combined_docs
-    assert "test credentials are not committed" in combined_docs
-    assert "provider username/password" in combined_docs
-    assert "7248659130" not in combined_docs
-    assert "bobjack" not in combined_docs.lower()
+    assert "admin portal credentials" in public_readme
+    assert "live hostnames" in public_readme
+    assert "internal IPs" in public_readme
+    assert "7248659130" not in public_readme
+    assert "bobjack" not in public_readme.lower()
+    assert "10.34." not in public_readme
+    assert "example.invalid" not in public_readme
 
 
 def test_android_sources_do_not_define_test_account_credentials():

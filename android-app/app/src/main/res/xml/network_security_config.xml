@@ -4,9 +4,6 @@
         <domain includeSubdomains="false">ahhshitherewegoagain.sytes.net</domain>
     </domain-config>
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.34.1.194</domain>
-    </domain-config>
-    <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">10.34.1.192</domain>
     </domain-config>
 </network-security-config>
